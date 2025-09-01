@@ -19,5 +19,18 @@
     "typescript": "^5.5.4",
     "@types/express": "^4.17.21",
     "@types/node": "^20.12.12"
-  }
+  },
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "types": ["node"],
+    "module": "commonjs",
+    "target": "es2019",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+
 }

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import "dotenv/config";
-import { Order } from "../models/Order.ts";
-import { makeToken } from "../lib/token.ts";
+import { Order } from "../models/Order.js";
+import { makeToken } from "../lib/token.js";
 import mongoose from "mongoose";
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest} from "pg-sdk-node";
 
@@ -50,7 +50,7 @@ router.get("/status", async (req, res, next) => {
   try {
     const { id } = req.query;
     console.log("Incoming id:", id);
-    
+
     if (!id || typeof id !== "string") {
       return res.status(400).send("Order Id missing");
     }
@@ -66,20 +66,22 @@ router.get("/status", async (req, res, next) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
+    if (!order.orderToken) {
+      return res.status(400).json({ error: "Order token missing" });
+    }
+
     // Call PhonePe with orderToken
     const response = await client.getOrderStatus(order.orderToken);
     const status = response.state; // COMPLETED, FAILED, etc.
 
-    // Redirect user
+    // Update order status in DB + redirect
     if (status === "COMPLETED") {
-    // Update order in DB
-    order.status = "paid"
-    await order.save();
+      order.status = "paid";
+      await order.save();
       return res.redirect(`${process.env.FRONTEND_ORIGIN}/order/${order._id}`);
     } else {
-      // Update order in DB
-    order.status = "failed"
-    await order.save();
+      order.status = "failed";
+      await order.save();
       return res.redirect(`${process.env.FRONTEND_ORIGIN}/failure`);
     }
   } catch (e) {

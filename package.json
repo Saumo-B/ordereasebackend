@@ -1,7 +1,6 @@
 {
   "name": "payment-engine",
   "version": "1.0.0",
-  "type": "module",
   "main": "dist/server.js",
   "scripts": {
     "dev1": "ts-node-dev --respawn --transpile-only src/server.ts",

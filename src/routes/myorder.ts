@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { Order } from "../models/Order.ts";
+import { Order } from "../models/Order.js";
 
 const router = Router();
 
