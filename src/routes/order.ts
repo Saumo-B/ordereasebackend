@@ -14,6 +14,7 @@ router.post("/", async (req, res, next) => {
   try {
     const { items = [], customer } = req.body || {};
     const amount = items.reduce((sum: number, it: any) => sum + it.price * it.qty, 0);
+    const amountDue = amount
     const orderToken = makeToken()
     const order = await Order.create({
       status: "created",
@@ -22,6 +23,7 @@ router.post("/", async (req, res, next) => {
       lineItems: items,
       customer,
       orderToken,
+      amountDue,
     });
 
     const  redirectUrl= `${process.env.BACKEND_ORIGIN!}/api/orders/status?id=${order.id}`;
@@ -154,7 +156,7 @@ router.put("/:id", async (req, res, next) => {
       }
     }
 
-    // ✅ Recalculate total amount from lineItems
+    //  Recalculate total amount from lineItems
     order.amount = order.lineItems.reduce(
       (sum: number, it: any) => sum + it.qty * it.price,
       0
@@ -167,7 +169,10 @@ router.put("/:id", async (req, res, next) => {
         ...customer,
       };
     }
-
+    if (order.status==="paid"){
+      order.status = "created";
+      order.amountDue = order.amount-order.amountDue;
+    }
     await order.save();
 
     return res.json({
