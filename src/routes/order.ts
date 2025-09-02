@@ -173,6 +173,9 @@ router.put("/:id", async (req, res, next) => {
       order.status = "created";
       order.amountDue = order.amount-order.amountDue;
     }
+    if (order.served){
+      order.served=false;
+    }
     await order.save();
 
     return res.json({
