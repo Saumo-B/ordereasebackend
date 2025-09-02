@@ -49,16 +49,23 @@ router.patch("/status/:orderId", async (req, res, next) => {
       return res.status(400).json({ error: "Invalid status value" });
     }
 
-    if (status === "paid" || status === "done"){
+    if (status === "paid"){
+    
     const order = await Order.findByIdAndUpdate(
       orderId,
       { status },
       { new: true }
     );
 
-
     if (!order) {
       return res.status(404).json({ error: "Order not found" });
+    }
+
+    if (order.served){
+      order.status = "done";
+      res.json({
+      message: `Order Completed`,
+      order,});
     }
 
     res.json({
@@ -73,11 +80,16 @@ router.patch("/status/:orderId", async (req, res, next) => {
       { new: true }
     );
 
-
     if (!order) {
       return res.status(404).json({ error: "Order not found" });
     }
 
+    if (order.status === "paid"){
+      order.status = "done";
+      res.json({
+      message: `Order Completed`,
+      order,});
+    }
     res.json({
       message: `Order is Served`,
       order,
