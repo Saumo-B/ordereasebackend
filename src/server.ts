@@ -6,6 +6,7 @@ import mongoose from "mongoose";
 import orders from "./routes/order.js";
 import kitchens from "./routes/kitchen.js";
 import myorders from "./routes/myorder.js";
+import orderv2s from "./routes/orderv2.js";
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use(express.json()); // for normal routes (webhook route handles raw body it
 app.use("/api/orders", orders);
 app.use("/api/kitchen", kitchens);
 app.use("/api/myorder", myorders);
+app.use("/api/orderv2", orderv2s);
 
 mongoose.connect(process.env.MONGODB_URI)
   .then(() => {
