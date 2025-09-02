@@ -63,6 +63,7 @@ router.patch("/status/:orderId", async (req, res, next) => {
 
     if (order.served){
       order.status = "done";
+      await order.save();
       res.json({
       message: `Order Completed`,
       order,});
@@ -86,6 +87,7 @@ router.patch("/status/:orderId", async (req, res, next) => {
 
     if (order.status === "paid"){
       order.status = "done";
+      await order.save();
       res.json({
       message: `Order Completed`,
       order,});
