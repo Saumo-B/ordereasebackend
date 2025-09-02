@@ -11,6 +11,7 @@ const OrderSchema = new mongoose.Schema({
   status: { type: String, enum: ["created","paid","done","failed"], default: "created" },
   amount: { type: Number, required: true },  // paise
   currency: { type: String, default: "INR" },
+  served: { type: Boolean, default: false},
   lineItems: [LineItem],
   customer: {
     name: String,
