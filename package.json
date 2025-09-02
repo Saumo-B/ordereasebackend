@@ -4,7 +4,8 @@
   "main": "dist/server.js",
   "scripts": {
     "dev1": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "dev": "nodemon src/server.ts",
+    "dev2": "nodemon src/server.ts",
+    "dev": "nodemon",
     "build": "tsc",
     "start": "node dist/server.js"
   },

@@ -3,10 +3,10 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import mongoose from "mongoose";
-import orders from "./routes/order.js";
-import kitchens from "./routes/kitchen.js";
-import myorders from "./routes/myorder.js";
-import orderv2s from "./routes/orderv2.js";
+import orders from "./routes/order";
+import kitchens from "./routes/kitchen";
+import myorders from "./routes/myorder";
+import orderv2s from "./routes/orderv2";
 
 const app = express();
 
@@ -29,7 +29,7 @@ app.use("/api/kitchen", kitchens);
 app.use("/api/myorder", myorders);
 app.use("/api/orderv2", orderv2s);
 
-mongoose.connect(process.env.MONGODB_URI)
+mongoose.connect(process.env.MONGODB_URI!)
   .then(() => {
     console.log("Connected to database!");
     app.listen(process.env.PORT  , () => {

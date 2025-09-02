@@ -1,13 +1,13 @@
 import { Router } from "express";
 import "dotenv/config";
-import { Order } from "../models/Order.js";
-import { makeToken } from "../lib/token.js";
+import { Order } from "../models/Order";
+import { makeToken } from "../lib/token";
 import mongoose from "mongoose";
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest} from "pg-sdk-node";
 
 const router = Router();
 
-const client= StandardCheckoutClient.getInstance(process.env.MERCHANT_ID,process.env.SALT_KEY, parseInt(process.env.SALT_INDEX), Env.SANDBOX)
+const client= StandardCheckoutClient.getInstance(process.env.MERCHANT_ID!,process.env.SALT_KEY!, parseInt(process.env.SALT_INDEX!), Env.SANDBOX)
     
 // Create order
 router.post("/", async (req, res, next) => {
@@ -24,7 +24,7 @@ router.post("/", async (req, res, next) => {
       orderToken,
     });
 
-    const  redirectUrl= `${process.env.BACKEND_ORIGIN}/api/orders/status?id=${order.id}`;
+    const  redirectUrl= `${process.env.BACKEND_ORIGIN!}/api/orders/status?id=${order.id}`;
     const request = StandardCheckoutPayRequest.builder()
     .merchantOrderId(orderToken)
     .amount(amount*100)
@@ -78,11 +78,11 @@ router.get("/status", async (req, res, next) => {
     if (status === "COMPLETED") {
       order.status = "paid";
       await order.save();
-      return res.redirect(`${process.env.FRONTEND_ORIGIN}/order/${order._id}`);
+      return res.redirect(`${process.env.FRONTEND_ORIGIN!}/order/${order._id}`);
     } else {
       order.status = "failed";
       await order.save();
-      return res.redirect(`${process.env.FRONTEND_ORIGIN}/failure`);
+      return res.redirect(`${process.env.FRONTEND_ORIGIN!}/failure`);
     }
   } catch (e) {
     console.error("Status check error:", e);
@@ -114,6 +114,68 @@ router.get("/detail", async (req, res, next) => {
     return res.json(order);
   } catch (e) {
     console.error("Detail fetch error:", e);
+    next(e);
+  }
+});
+
+router.put("/:id", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ error: "Invalid MongoDB ObjectId" });
+    }
+
+    const { items = [], customer } = req.body;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ error: "No items provided" });
+    }
+
+    const order = await Order.findById(id);
+    if (!order) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    // Merge items into existing lineItems
+    for (const newItem of items) {
+      const existingItem = order.lineItems.find(
+        (it: any) => it.sku === newItem.sku
+      );
+
+      if (existingItem) {
+        existingItem.qty += newItem.qty;
+      } else {
+        order.lineItems.push({
+          sku: newItem.sku,
+          qty: newItem.qty,
+          price: newItem.price, // store as paise
+        });
+      }
+    }
+
+    // ✅ Recalculate total amount from lineItems
+    order.amount = order.lineItems.reduce(
+      (sum: number, it: any) => sum + it.qty * it.price,
+      0
+    );
+
+    // ✅ Update customer info if provided
+    if (customer) {
+      order.customer = {
+        ...order.customer,
+        ...customer,
+      };
+    }
+
+    await order.save();
+
+    return res.json({
+      message: "Order updated successfully",
+      order,
+    });
+  } catch (e) {
+    console.error("Order update error:", e);
     next(e);
   }
 });

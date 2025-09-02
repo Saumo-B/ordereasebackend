@@ -1,6 +1,6 @@
 import { Router } from "express";
 import "dotenv/config";
-import { Order } from "../models/Order.js";
+import { Order } from "../models/Order";
 
 const router = Router();
 
@@ -44,7 +44,7 @@ router.patch("/status/:orderId", async (req, res, next) => {
     }
 
     // validate allowed statuses
-    const allowedStatuses = ["created", "paid", "done", "failed"];
+    const allowedStatuses = ["created", "paid", "done", "failed", "served"];
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ error: "Invalid status value" });
     }
