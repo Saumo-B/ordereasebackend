@@ -10,3 +10,4 @@ const makeToken = () => {
     return token;
 };
 exports.makeToken = makeToken;
+//# sourceMappingURL=token.js.map

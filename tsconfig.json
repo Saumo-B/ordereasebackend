@@ -10,8 +10,6 @@
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "mongoose": "^8.4.1",
-    // "razorpay": "^2.9.4",
-    // "helmet": "^7.1.0",
     "cors": "^2.8.5"
   },
   "devDependencies": {
@@ -25,12 +23,18 @@
     "rootDir": "src",
     "types": ["node"],
     "module": "commonjs",
-    "target": "es2019",
+    "target": "es6",
+    "noImplicitAny": true,
+    "moduleResolution": "node",
+    "sourceMap": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "strict": true
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+        "*": ["node_modules/*", "src/types/*"]
+    }
   },
-  "include": ["src"],
-  "exclude": ["node_modules", "dist"]
-
+  "include": ["./src"],
+  // "exclude": ["node_modules", "dist"]
 }

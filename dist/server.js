@@ -14,7 +14,7 @@ const myorder_1 = __importDefault(require("./routes/myorder"));
 const orderv2_1 = __importDefault(require("./routes/orderv2"));
 const app = (0, express_1.default)();
 app.get('/', (req, res) => {
-    res.send('Payment engine is Running');
+    return res.send('Payment engine is Running');
 });
 // app.get("/token", (req, res) =>{
 //   try {
@@ -40,3 +40,4 @@ mongoose_1.default.connect(process.env.MONGODB_URI)
     .catch(() => {
     console.log("Connection failed!");
 });
+//# sourceMappingURL=server.js.map
