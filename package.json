@@ -6,7 +6,8 @@
     "dev1": "ts-node-dev --respawn --transpile-only src/server.ts",
     "dev2": "nodemon src/server.ts",
     "dev": "nodemon",
-    "build": "tsc",
+    "build": "rimraf dist && tsc",
+    "add-build": "git add dist",
     "start": "node dist/server.js"
   },
   "dependencies": {
@@ -20,7 +21,9 @@
     "mongoose": "^8.4.1",
     "nodemon": "^3.1.10",
     "npm": "^11.5.2",
-    "pg-sdk-node": "https://phonepe.mycloudrepo.io/public/repositories/phonepe-pg-sdk-node/releases/v2/phonepe-pg-sdk-node.tgz"
+    "pg-sdk-node": "https://phonepe.mycloudrepo.io/public/repositories/phonepe-pg-sdk-node/releases/v2/phonepe-pg-sdk-node.tgz",
+    "pre-commit": "^1.2.2",
+    "rimraf": "^6.0.1"
   },
   "devDependencies": {
     "@types/cors": "^2.8.17",
@@ -29,5 +32,10 @@
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.2"
-  }
+  },
+  "pre-commit": [
+    "ts.check",
+    "build",
+    "add-build"
+  ]
 }
