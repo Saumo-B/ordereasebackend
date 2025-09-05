@@ -178,5 +178,25 @@ router.put("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, functio
         next(e);
     }
 }));
+router.delete("/:orderId", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { orderId } = req.params;
+        if (!mongoose_1.default.Types.ObjectId.isValid(orderId)) {
+            return res.status(400).json({ error: "Invalid MongoDB ObjectId" });
+        }
+        const deletedOrder = yield Order_1.Order.findByIdAndDelete(orderId);
+        if (!deletedOrder) {
+            return res.status(404).json({ error: "Order not found" });
+        }
+        return res.json({
+            message: "Order deleted successfully",
+            order: deletedOrder,
+        });
+    }
+    catch (e) {
+        console.error("Order delete error:", e);
+        next(e);
+    }
+}));
 exports.default = router;
 //# sourceMappingURL=order.js.map

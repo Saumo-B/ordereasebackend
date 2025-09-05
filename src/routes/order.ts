@@ -184,4 +184,27 @@ router.put("/:id", async (req, res, next) => {
   }
 });
 
+router.delete("/:orderId", async (req, res, next) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ error: "Invalid MongoDB ObjectId" });
+    }
+
+    const deletedOrder = await Order.findByIdAndDelete(orderId);
+
+    if (!deletedOrder) {
+      return res.status(404).json({ error: "Order not found" });
+    }
+
+    return res.json({
+      message: "Order deleted successfully",
+      order: deletedOrder,
+    });
+  } catch (e) {
+    console.error("Order delete error:", e);
+    next(e);
+  }
+});
 export default router;
