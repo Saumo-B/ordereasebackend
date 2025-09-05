@@ -156,6 +156,9 @@ router.put("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, functio
             order.status = "created";
             order.amountDue = order.amount - order.amountDue;
         }
+        else {
+            order.amountDue = order.amount;
+        }
         if (order.served) {
             order.served = false;
         }
