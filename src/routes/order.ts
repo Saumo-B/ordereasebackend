@@ -163,11 +163,15 @@ router.put("/:id", async (req, res, next) => {
     // Merge customer
     if (customer) order.customer = { ...order.customer, ...customer };
 
-    // ✅ Amount due should only grow by newly added items
-    order.amountDue = Math.max(0, (order.amountDue || 0) + newItemsTotal);
-
-    // If it was fully paid and we added chargeable items, mark as unpaid
-    if (wasPaid && newItemsTotal > 0) order.status = "created";
+    // ✅ Correct amountDue logic
+    if (wasPaid) {
+      // order was fully paid, only new items are due
+      order.amountDue = newItemsTotal;
+      if (newItemsTotal > 0) order.status = "created"; // revert to unpaid if new dues exist
+    } else {
+      // order wasn't fully paid → add new items to current due
+      order.amountDue = (order.amountDue || 0) + newItemsTotal;
+    }
 
     // Adding items means it can't stay served
     if (order.served) order.served = false;
@@ -179,6 +183,5 @@ router.put("/:id", async (req, res, next) => {
     next(e);
   }
 });
-
 
 export default router;
