@@ -179,7 +179,7 @@ router.put("/:id", async (req, res, next) => {
     await order.save();
 
     return res.json({
-      message: "Order updated successfully",
+      message: "Order updated successfully ",
       order,
     });
   } catch (e) {

@@ -161,7 +161,7 @@ router.put("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, functio
         }
         yield order.save();
         return res.json({
-            message: "Order updated successfully",
+            message: "Order updated successfully ",
             order,
         });
     }
