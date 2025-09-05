@@ -135,39 +135,45 @@ router.put("/:id", async (req, res, next) => {
     const order = await Order.findById(id);
     if (!order) return res.status(404).json({ error: "Order not found" });
 
-    // Merge items & calculate newItemsTotal in one pass
-    const newItemsTotal = items.reduce((sum, newItem) => {
-      const existingItem = order.lineItems.find((it: any) => it.sku === newItem.sku);
-      if (existingItem) {
-        existingItem.qty += newItem.qty;
-        return sum + newItem.qty * existingItem.price;
-      } else {
-        order.lineItems.push({ ...newItem }); // sku, qty, price
-        return sum + newItem.qty * newItem.price;
+    const wasPaid = order.status === "paid";
+    let newItemsTotal = 0;
+
+    // Merge items & compute newItemsTotal
+    for (const { sku, qty, price } of items) {
+      if (!sku || !Number.isFinite(qty) || qty <= 0) {
+        return res.status(400).json({ error: `Invalid qty for sku ${sku || "(missing)"}` });
       }
-    }, 0);
 
-    // Recalculate total
-    order.amount = order.lineItems.reduce((sum, it: any) => sum + it.qty * it.price, 0);
-
-    // Update customer if provided
-    if (customer) order.customer = { ...order.customer, ...customer };
-
-    // AmountDue logic
-    order.amountDue = order.status === "paid"
-      ? (order.amountDue || 0) + newItemsTotal
-      : order.amount;
-
-    if (order.status === "paid" && newItemsTotal > 0) {
-      order.status = "created"; // revert to unpaid since new dues exist
+      const existing = order.lineItems.find((it: any) => it.sku === sku);
+      if (existing) {
+        existing.qty += qty;
+        newItemsTotal += qty * existing.price;        // use existing price
+      } else {
+        if (!Number.isFinite(price) || price <= 0) {
+          return res.status(400).json({ error: `Missing/invalid price for new sku ${sku}` });
+        }
+        order.lineItems.push({ sku, qty, price });    // store in paise
+        newItemsTotal += qty * price;
+      }
     }
 
-    // Reset served if already marked
+    // Recalculate grand total
+    order.amount = order.lineItems.reduce((sum: number, it: any) => sum + it.qty * it.price, 0);
+
+    // Merge customer
+    if (customer) order.customer = { ...order.customer, ...customer };
+
+    // ✅ Amount due should only grow by newly added items
+    order.amountDue = Math.max(0, (order.amountDue || 0) + newItemsTotal);
+
+    // If it was fully paid and we added chargeable items, mark as unpaid
+    if (wasPaid && newItemsTotal > 0) order.status = "created";
+
+    // Adding items means it can't stay served
     if (order.served) order.served = false;
 
     await order.save();
-
-    res.json({ message: "Order updated successfully", order });
+    return res.json({ message: "Order updated successfully", order });
   } catch (e) {
     console.error("Order update error:", e);
     next(e);
