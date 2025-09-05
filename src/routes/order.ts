@@ -123,71 +123,56 @@ router.get("/detail", async (req, res, next) => {
 router.put("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
+    const { items = [], customer } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ error: "Invalid MongoDB ObjectId" });
     }
-
-    const { items = [], customer } = req.body;
-
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: "No items provided" });
     }
 
     const order = await Order.findById(id);
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
-    }
+    if (!order) return res.status(404).json({ error: "Order not found" });
 
-    // Merge items into existing lineItems
-    for (const newItem of items) {
-      const existingItem = order.lineItems.find(
-        (it: any) => it.sku === newItem.sku
-      );
-
+    // Merge items & calculate newItemsTotal in one pass
+    const newItemsTotal = items.reduce((sum, newItem) => {
+      const existingItem = order.lineItems.find((it: any) => it.sku === newItem.sku);
       if (existingItem) {
         existingItem.qty += newItem.qty;
+        return sum + newItem.qty * existingItem.price;
       } else {
-        order.lineItems.push({
-          sku: newItem.sku,
-          qty: newItem.qty,
-          price: newItem.price, // store as paise
-        });
+        order.lineItems.push({ ...newItem }); // sku, qty, price
+        return sum + newItem.qty * newItem.price;
       }
+    }, 0);
+
+    // Recalculate total
+    order.amount = order.lineItems.reduce((sum, it: any) => sum + it.qty * it.price, 0);
+
+    // Update customer if provided
+    if (customer) order.customer = { ...order.customer, ...customer };
+
+    // AmountDue logic
+    order.amountDue = order.status === "paid"
+      ? (order.amountDue || 0) + newItemsTotal
+      : order.amount;
+
+    if (order.status === "paid" && newItemsTotal > 0) {
+      order.status = "created"; // revert to unpaid since new dues exist
     }
 
-    //  Recalculate total amount from lineItems
-    order.amount = order.lineItems.reduce(
-      (sum: number, it: any) => sum + it.qty * it.price,
-      0
-    );
+    // Reset served if already marked
+    if (order.served) order.served = false;
 
-    // ✅ Update customer info if provided
-    if (customer) {
-      order.customer = {
-        ...order.customer,
-        ...customer,
-      };
-    }
-    if (order.status==="paid"){
-      order.status = "created";
-      order.amountDue = order.amount-order.amountDue;
-    }else{
-      order.amountDue = order.amount;
-    }
-    if (order.served){
-      order.served=false;
-    }
     await order.save();
 
-    return res.json({
-      message: "Order updated successfully ",
-      order,
-    });
+    res.json({ message: "Order updated successfully", order });
   } catch (e) {
     console.error("Order update error:", e);
     next(e);
   }
 });
+
 
 export default router;
