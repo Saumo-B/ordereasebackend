@@ -25,6 +25,7 @@
 .DS_Store
 *.pem
 /.idea
+/.vercel
 
 # debug
 npm-debug.log*
