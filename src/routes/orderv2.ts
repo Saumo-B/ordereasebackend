@@ -13,7 +13,7 @@ router.post("/", async (req, res, next) => {
     const { items = [], customer } = req.body || {};
     const amount = items.reduce((sum: number, it: any) => sum + it.price * it.qty, 0);
     const amountDue = amount;
-    const orderToken = makeToken()
+    const orderToken = await makeToken()
     const order = await Order.create({
       status: "created",
       amount,
