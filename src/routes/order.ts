@@ -80,7 +80,7 @@ router.get("/status", async (req, res, next) => {
     if (status === "COMPLETED") {
       order.status = "paid";
       await order.save();
-      return res.redirect(`${process.env.FRONTEND_ORIGIN!}/order/${order._id}`);
+      return res.redirect(`${process.env.FRONTEND_ORIGIN!}/order/${order._id}?history=replace`);
     } else {
       order.status = "failed";
       await order.save();

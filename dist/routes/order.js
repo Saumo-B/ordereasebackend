@@ -84,7 +84,7 @@ router.get("/status", (req, res, next) => __awaiter(void 0, void 0, void 0, func
         if (status === "COMPLETED") {
             order.status = "paid";
             yield order.save();
-            return res.redirect(`${process.env.FRONTEND_ORIGIN}/order/${order._id}`);
+            return res.redirect(`${process.env.FRONTEND_ORIGIN}/order/${order._id}?history=replace`);
         }
         else {
             order.status = "failed";
