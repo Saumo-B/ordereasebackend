@@ -8,18 +8,25 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 require("dotenv/config");
 const Order_1 = require("../models/Order");
+const dayjs_1 = __importDefault(require("dayjs"));
+const utc_1 = __importDefault(require("dayjs/plugin/utc"));
+const timezone_1 = __importDefault(require("dayjs/plugin/timezone"));
+dayjs_1.default.extend(utc_1.default);
+dayjs_1.default.extend(timezone_1.default);
 const router = (0, express_1.Router)();
-// Get all orders for today
+const TZ = "Asia/Kolkata"; // Force IST
+// Get all orders for today (IST)
 router.get("/today", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date();
-        endOfDay.setHours(23, 59, 59, 999);
+        const startOfDay = (0, dayjs_1.default)().tz(TZ).startOf("day").toDate();
+        const endOfDay = (0, dayjs_1.default)().tz(TZ).endOf("day").toDate();
         const orders = yield Order_1.Order.find({
             createdAt: { $gte: startOfDay, $lte: endOfDay },
         })
@@ -100,13 +107,11 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
         next(err);
     }
 }));
-// 📊 GET /api/kitchen/dashboard-stats
+// 📊 GET /api/kitchen/dashboard-stats (IST-based)
 router.get("/dashboard-stats", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date();
-        endOfDay.setHours(23, 59, 59, 999);
+        const startOfDay = (0, dayjs_1.default)().tz(TZ).startOf("day").toDate();
+        const endOfDay = (0, dayjs_1.default)().tz(TZ).endOf("day").toDate();
         const todayOrders = yield Order_1.Order.find({
             createdAt: { $gte: startOfDay, $lte: endOfDay },
         });
@@ -126,7 +131,7 @@ router.get("/dashboard-stats", (req, res, next) => __awaiter(void 0, void 0, voi
         // ---- Sales by hour
         const salesByHourMap = {};
         for (const order of paidOrders) {
-            const hour = new Date(order.createdAt).getHours();
+            const hour = (0, dayjs_1.default)(order.createdAt).tz(TZ).hour();
             const label = hour === 0 ? "12am" :
                 hour < 12 ? `${hour}am` :
                     hour === 12 ? "12pm" : `${hour - 12}pm`;

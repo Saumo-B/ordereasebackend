@@ -14,6 +14,7 @@ const myorder_1 = __importDefault(require("./routes/myorder"));
 const orderv2_1 = __importDefault(require("./routes/orderv2"));
 const menu_1 = __importDefault(require("./routes/menu"));
 const ingredients_1 = __importDefault(require("./routes/ingredients"));
+const table_1 = __importDefault(require("./routes/table"));
 const app = (0, express_1.default)();
 app.get('/', (req, res) => {
     return res.send('Payment engine is Running');
@@ -33,6 +34,7 @@ app.use("/api/kitchen", kitchen_1.default);
 app.use("/api/myorder", myorder_1.default);
 app.use("/api/orderv2", orderv2_1.default);
 app.use("/api/menu", menu_1.default);
+app.use("/api/table", table_1.default);
 app.use("/api/ingredients", ingredients_1.default);
 mongoose_1.default.connect(process.env.MONGODB_URI)
     .then(() => {

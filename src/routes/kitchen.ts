@@ -2,17 +2,21 @@ import { Router } from "express";
 import "dotenv/config";
 import { deductInventory } from "../lib/inventoryService";
 import { Order } from "../models/Order";
+import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
+
+dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const router = Router();
+const TZ = "Asia/Kolkata"; // Force IST
 
-// Get all orders for today
+// Get all orders for today (IST)
 router.get("/today", async (req, res, next) => {
   try {
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfDay = dayjs().tz(TZ).startOf("day").toDate();
+    const endOfDay = dayjs().tz(TZ).endOf("day").toDate();
 
     const orders = await Order.find({
       createdAt: { $gte: startOfDay, $lte: endOfDay },
@@ -90,7 +94,6 @@ router.patch("/status/:orderId", async (req, res, next) => {
         { served: true },
         { new: true }
       );
-      
 
       if (!order) {
         return res.status(404).json({ error: "Order not found" });
@@ -115,14 +118,11 @@ router.patch("/status/:orderId", async (req, res, next) => {
   }
 });
 
-// 📊 GET /api/kitchen/dashboard-stats
+// 📊 GET /api/kitchen/dashboard-stats (IST-based)
 router.get("/dashboard-stats", async (req, res, next) => {
   try {
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
+    const startOfDay = dayjs().tz(TZ).startOf("day").toDate();
+    const endOfDay = dayjs().tz(TZ).endOf("day").toDate();
 
     const todayOrders = await Order.find({
       createdAt: { $gte: startOfDay, $lte: endOfDay },
@@ -146,7 +146,7 @@ router.get("/dashboard-stats", async (req, res, next) => {
     // ---- Sales by hour
     const salesByHourMap: Record<string, number> = {};
     for (const order of paidOrders) {
-      const hour = new Date(order.createdAt).getHours();
+      const hour = dayjs(order.createdAt).tz(TZ).hour();
       const label =
         hour === 0 ? "12am" :
         hour < 12 ? `${hour}am` :

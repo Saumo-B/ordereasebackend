@@ -9,6 +9,7 @@ import myorders from "./routes/myorder";
 import orderv2s from "./routes/orderv2";
 import menu from "./routes/menu";
 import ingredients from "./routes/ingredients";
+import table from "./routes/table"
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use("/api/kitchen", kitchens);
 app.use("/api/myorder", myorders);
 app.use("/api/orderv2", orderv2s);
 app.use("/api/menu", menu);
+app.use("/api/table", table);
 app.use("/api/ingredients", ingredients);
 
 mongoose.connect(process.env.MONGODB_URI!)
