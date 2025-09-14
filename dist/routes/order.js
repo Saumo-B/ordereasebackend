@@ -186,28 +186,24 @@ router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         if (order.status === "paid") {
             return res.status(400).json({ error: "Paid orders cannot be updated" });
         }
-        // Merge items
+        // Validate and replace items
         for (const { sku, qty, price } of items) {
             if (!sku || !Number.isFinite(qty) || qty <= 0) {
                 return res.status(400).json({ error: `Invalid qty for sku ${sku || "(missing)"}` });
             }
-            const existing = order.lineItems.find((it) => it.sku === sku);
-            if (existing) {
-                existing.qty += qty;
-            }
-            else {
-                if (!Number.isFinite(price) || price <= 0) {
-                    return res.status(400).json({ error: `Missing/invalid price for new sku ${sku}` });
-                }
-                order.lineItems.push({ sku, qty, price });
+            if (!Number.isFinite(price) || price <= 0) {
+                return res.status(400).json({ error: `Missing/invalid price for sku ${sku}` });
             }
         }
+        // ✅ Replace items instead of merging
+        order.lineItems = items;
         // Recalculate grand total
         order.amount = order.lineItems.reduce((sum, it) => sum + it.qty * it.price, 0);
-        // Merge customer
-        if (customer)
+        // Merge customer (only overwrite provided fields)
+        if (customer) {
             order.customer = Object.assign(Object.assign({}, order.customer), customer);
-        // Reset "served" if items are changed
+        }
+        // Reset served flag because order changed
         if (order.served)
             order.served = false;
         yield order.save();
