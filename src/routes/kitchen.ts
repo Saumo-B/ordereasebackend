@@ -1,5 +1,6 @@
 import { Router } from "express";
 import "dotenv/config";
+import { deductInventory } from "../lib/inventoryService";
 import { Order } from "../models/Order";
 
 const router = Router();
@@ -49,56 +50,149 @@ router.patch("/status/:orderId", async (req, res, next) => {
       return res.status(400).json({ error: "Invalid status value" });
     }
 
-    if (status === "paid"){
-    
-    const order = await Order.findByIdAndUpdate(
-      orderId,
-      { status },
-      { new: true }
-    );
+    if (status === "paid") {
+      const order = await Order.findByIdAndUpdate(
+        orderId,
+        { status },
+        { new: true }
+      );
 
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+
+      if (order.served) {
+        order.status = "done";
+        await order.save();
+        return res.json({
+          message: `Order Completed`,
+          order,
+        });
+      }
+
+      return res.json({
+        message: `Order status updated to ${status}`,
+        order,
+      });
     }
 
-    if (order.served){
-      order.status = "done";
-      await order.save();
-      res.json({
-      message: `Order Completed`,
-      order,});
-    }
+    if (status === "served") {
+      // try {
+      //   await deductInventory(orderId);
+      // } catch (err) {
+      //   if (err instanceof Error) {
+      //     return res.status(400).json({ error: err.message });
+      //   }
+      //   return res.status(400).json({ error: "Unknown error while deducting inventory" });
+      // }
+      const order = await Order.findByIdAndUpdate(
+        orderId,
+        { served: true },
+        { new: true }
+      );
+      
 
-    res.json({
-      message: `Order status updated to ${status}`,
-      order,
-    });
-  }
-  if (status === "served"){
-    const order = await Order.findByIdAndUpdate(
-      orderId,
-      { served: true },
-      { new: true }
-    );
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
 
-    if (!order) {
-      return res.status(404).json({ error: "Order not found" });
-    }
+      if (order.status === "paid") {
+        order.status = "done";
+        await order.save();
+        return res.json({
+          message: `Order Completed`,
+          order,
+        });
+      }
 
-    if (order.status === "paid"){
-      order.status = "done";
-      await order.save();
-      res.json({
-      message: `Order Completed`,
-      order,});
+      return res.json({
+        message: `Order is Served`,
+        order,
+      });
     }
-    res.json({
-      message: `Order is Served`,
-      order,
-    });
-  }
   } catch (err) {
     next(err);
+  }
+});
+
+// 📊 GET /api/kitchen/dashboard-stats
+router.get("/dashboard-stats", async (req, res, next) => {
+  try {
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const todayOrders = await Order.find({
+      createdAt: { $gte: startOfDay, $lte: endOfDay },
+    });
+
+    if (!todayOrders.length) {
+      return res.json({
+        todayStats: { totalRevenue: 0, totalOrders: 0, averageOrderValue: 0 },
+        salesByHour: [],
+        topSellingItems: [],
+        orderStatusCounts: [],
+      });
+    }
+
+    // ---- Today stats
+    const paidOrders = todayOrders.filter(o => ["paid", "done"].includes(o.status));
+    const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
+    const totalOrders = todayOrders.length;
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    // ---- Sales by hour
+    const salesByHourMap: Record<string, number> = {};
+    for (const order of paidOrders) {
+      const hour = new Date(order.createdAt).getHours();
+      const label =
+        hour === 0 ? "12am" :
+        hour < 12 ? `${hour}am` :
+        hour === 12 ? "12pm" : `${hour - 12}pm`;
+      salesByHourMap[label] = (salesByHourMap[label] || 0) + (order.amount || 0);
+    }
+    const salesByHour = Object.entries(salesByHourMap).map(([hour, revenue]) => ({
+      hour,
+      revenue,
+    }));
+
+    // ---- Top selling items
+    const itemCount: Record<string, number> = {};
+    for (const order of todayOrders) {
+      for (const item of order.lineItems) {
+        itemCount[item.sku] = (itemCount[item.sku] || 0) + item.qty;
+      }
+    }
+    const topSellingItems = Object.entries(itemCount)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5);
+
+    // ---- Order status counts
+    const statusCount: Record<string, number> = {};
+    for (const order of todayOrders) {
+      statusCount[order.status] = (statusCount[order.status] || 0) + 1;
+    }
+    const orderStatusCounts = Object.entries(statusCount).map(([status, count]) => ({
+      status,
+      count,
+    }));
+
+    return res.json({
+      todayStats: {
+        totalRevenue,
+        totalOrders,
+        averageOrderValue: Number(averageOrderValue.toFixed(2)),
+      },
+      salesByHour,
+      topSellingItems,
+      orderStatusCounts,
+    });
+  } catch (e) {
+    console.error("Dashboard stats error:", e);
+    next(e);
   }
 });
 

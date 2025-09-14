@@ -59,17 +59,25 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
             if (order.served) {
                 order.status = "done";
                 yield order.save();
-                res.json({
+                return res.json({
                     message: `Order Completed`,
                     order,
                 });
             }
-            res.json({
+            return res.json({
                 message: `Order status updated to ${status}`,
                 order,
             });
         }
         if (status === "served") {
+            // try {
+            //   await deductInventory(orderId);
+            // } catch (err) {
+            //   if (err instanceof Error) {
+            //     return res.status(400).json({ error: err.message });
+            //   }
+            //   return res.status(400).json({ error: "Unknown error while deducting inventory" });
+            // }
             const order = yield Order_1.Order.findByIdAndUpdate(orderId, { served: true }, { new: true });
             if (!order) {
                 return res.status(404).json({ error: "Order not found" });
@@ -77,12 +85,12 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
             if (order.status === "paid") {
                 order.status = "done";
                 yield order.save();
-                res.json({
+                return res.json({
                     message: `Order Completed`,
                     order,
                 });
             }
-            res.json({
+            return res.json({
                 message: `Order is Served`,
                 order,
             });
@@ -90,6 +98,78 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
     }
     catch (err) {
         next(err);
+    }
+}));
+// 📊 GET /api/kitchen/dashboard-stats
+router.get("/dashboard-stats", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+        const todayOrders = yield Order_1.Order.find({
+            createdAt: { $gte: startOfDay, $lte: endOfDay },
+        });
+        if (!todayOrders.length) {
+            return res.json({
+                todayStats: { totalRevenue: 0, totalOrders: 0, averageOrderValue: 0 },
+                salesByHour: [],
+                topSellingItems: [],
+                orderStatusCounts: [],
+            });
+        }
+        // ---- Today stats
+        const paidOrders = todayOrders.filter(o => ["paid", "done"].includes(o.status));
+        const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
+        const totalOrders = todayOrders.length;
+        const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+        // ---- Sales by hour
+        const salesByHourMap = {};
+        for (const order of paidOrders) {
+            const hour = new Date(order.createdAt).getHours();
+            const label = hour === 0 ? "12am" :
+                hour < 12 ? `${hour}am` :
+                    hour === 12 ? "12pm" : `${hour - 12}pm`;
+            salesByHourMap[label] = (salesByHourMap[label] || 0) + (order.amount || 0);
+        }
+        const salesByHour = Object.entries(salesByHourMap).map(([hour, revenue]) => ({
+            hour,
+            revenue,
+        }));
+        // ---- Top selling items
+        const itemCount = {};
+        for (const order of todayOrders) {
+            for (const item of order.lineItems) {
+                itemCount[item.sku] = (itemCount[item.sku] || 0) + item.qty;
+            }
+        }
+        const topSellingItems = Object.entries(itemCount)
+            .map(([name, count]) => ({ name, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5);
+        // ---- Order status counts
+        const statusCount = {};
+        for (const order of todayOrders) {
+            statusCount[order.status] = (statusCount[order.status] || 0) + 1;
+        }
+        const orderStatusCounts = Object.entries(statusCount).map(([status, count]) => ({
+            status,
+            count,
+        }));
+        return res.json({
+            todayStats: {
+                totalRevenue,
+                totalOrders,
+                averageOrderValue: Number(averageOrderValue.toFixed(2)),
+            },
+            salesByHour,
+            topSellingItems,
+            orderStatusCounts,
+        });
+    }
+    catch (e) {
+        console.error("Dashboard stats error:", e);
+        next(e);
     }
 }));
 exports.default = router;

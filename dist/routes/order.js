@@ -118,22 +118,75 @@ router.get("/detail", (req, res, next) => __awaiter(void 0, void 0, void 0, func
         next(e);
     }
 }));
-router.put("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+// router.put("/:id", async (req, res, next) => {
+//   try {
+//     const { id } = req.params;
+//     const { items = [], customer } = req.body;
+//     if (!mongoose.Types.ObjectId.isValid(id)) {
+//       return res.status(400).json({ error: "Invalid MongoDB ObjectId" });
+//     }
+//     if (!Array.isArray(items) || items.length === 0) {
+//       return res.status(400).json({ error: "No items provided" });
+//     }
+//     const order = await Order.findById(id);
+//     if (!order) return res.status(404).json({ error: "Order not found" });
+//     const wasPaid = order.status === "paid";
+//     let newItemsTotal = 0;
+//     // Merge items & compute newItemsTotal
+//     for (const { sku, qty, price } of items) {
+//       if (!sku || !Number.isFinite(qty) || qty <= 0) {
+//         return res.status(400).json({ error: `Invalid qty for sku ${sku || "(missing)"}` });
+//       }
+//       const existing = order.lineItems.find((it: any) => it.sku === sku);
+//       if (existing) {
+//         existing.qty += qty;
+//         newItemsTotal += qty * existing.price;        // use existing price
+//       } else {
+//         if (!Number.isFinite(price) || price <= 0) {
+//           return res.status(400).json({ error: `Missing/invalid price for new sku ${sku}` });
+//         }
+//         order.lineItems.push({ sku, qty, price });    // store in paise
+//         newItemsTotal += qty * price;
+//       }
+//     }
+//     // Recalculate grand total
+//     order.amount = order.lineItems.reduce((sum: number, it: any) => sum + it.qty * it.price, 0);
+//     // Merge customer
+//     if (customer) order.customer = { ...order.customer, ...customer };
+//     // ✅ Correct amountDue logic
+//     if (wasPaid) {
+//       // order was fully paid, only new items are due
+//       order.amountDue = newItemsTotal;
+//       if (newItemsTotal > 0) order.status = "created"; // revert to unpaid if new dues exist
+//     } else {
+//       // order wasn't fully paid → add new items to current due
+//       order.amountDue = (order.amountDue || 0) + newItemsTotal;
+//     }
+//     // Adding items means it can't stay served
+//     if (order.served) order.served = false;
+//     await order.save();
+//     return res.json({ message: "Order updated successfully", order });
+//   } catch (e) {
+//     console.error("Order update error:", e);
+//     next(e);
+//   }
+// });
+// PATCH /api/orders/:id
+router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
         const { items = [], customer } = req.body;
         if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ error: "Invalid MongoDB ObjectId" });
         }
-        if (!Array.isArray(items) || items.length === 0) {
-            return res.status(400).json({ error: "No items provided" });
-        }
         const order = yield Order_1.Order.findById(id);
         if (!order)
             return res.status(404).json({ error: "Order not found" });
-        const wasPaid = order.status === "paid";
-        let newItemsTotal = 0;
-        // Merge items & compute newItemsTotal
+        // Prevent updates if order is already paid
+        if (order.status === "paid") {
+            return res.status(400).json({ error: "Paid orders cannot be updated" });
+        }
+        // Merge items
         for (const { sku, qty, price } of items) {
             if (!sku || !Number.isFinite(qty) || qty <= 0) {
                 return res.status(400).json({ error: `Invalid qty for sku ${sku || "(missing)"}` });
@@ -141,14 +194,12 @@ router.put("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, functio
             const existing = order.lineItems.find((it) => it.sku === sku);
             if (existing) {
                 existing.qty += qty;
-                newItemsTotal += qty * existing.price; // use existing price
             }
             else {
                 if (!Number.isFinite(price) || price <= 0) {
                     return res.status(400).json({ error: `Missing/invalid price for new sku ${sku}` });
                 }
-                order.lineItems.push({ sku, qty, price }); // store in paise
-                newItemsTotal += qty * price;
+                order.lineItems.push({ sku, qty, price });
             }
         }
         // Recalculate grand total
@@ -156,18 +207,7 @@ router.put("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, functio
         // Merge customer
         if (customer)
             order.customer = Object.assign(Object.assign({}, order.customer), customer);
-        // ✅ Correct amountDue logic
-        if (wasPaid) {
-            // order was fully paid, only new items are due
-            order.amountDue = newItemsTotal;
-            if (newItemsTotal > 0)
-                order.status = "created"; // revert to unpaid if new dues exist
-        }
-        else {
-            // order wasn't fully paid → add new items to current due
-            order.amountDue = (order.amountDue || 0) + newItemsTotal;
-        }
-        // Adding items means it can't stay served
+        // Reset "served" if items are changed
         if (order.served)
             order.served = false;
         yield order.save();
@@ -190,7 +230,7 @@ router.delete("/:orderId", (req, res, next) => __awaiter(void 0, void 0, void 0,
         }
         return res.json({
             message: "Order deleted successfully",
-            order: deletedOrder,
+            // order: deletedOrder,
         });
     }
     catch (e) {
