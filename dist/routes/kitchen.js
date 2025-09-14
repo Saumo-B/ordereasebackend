@@ -177,5 +177,64 @@ router.get("/dashboard-stats", (req, res, next) => __awaiter(void 0, void 0, voi
         next(e);
     }
 }));
+router.get("/sales-report", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { startDate, endDate } = req.query;
+        if (!startDate || !endDate) {
+            return res.status(400).json({ error: "startDate and endDate are required (YYYY-MM-DD)" });
+        }
+        const start = (0, dayjs_1.default)(startDate).startOf("day").toDate();
+        const end = (0, dayjs_1.default)(endDate).endOf("day").toDate();
+        // Fetch orders in range
+        const orders = yield Order_1.Order.find({
+            createdAt: { $gte: start, $lte: end },
+            status: { $in: ["paid", "done"] }, // only count successful orders
+        })
+            .sort({ createdAt: 1 })
+            .lean();
+        if (!orders.length) {
+            return res.json({
+                summary: { totalRevenue: 0, totalOrders: 0, averageOrderValue: 0 },
+                salesTrend: [],
+                orders: [],
+            });
+        }
+        // ---- Summary
+        const totalRevenue = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
+        const totalOrders = orders.length;
+        const averageOrderValue = totalRevenue / totalOrders;
+        // ---- Sales trend (group by date)
+        const trendMap = {};
+        for (const order of orders) {
+            const date = (0, dayjs_1.default)(order.createdAt).format("YYYY-MM-DD");
+            trendMap[date] = (trendMap[date] || 0) + (order.amount || 0);
+        }
+        const salesTrend = Object.entries(trendMap).map(([date, revenue]) => ({
+            date,
+            revenue,
+        }));
+        // ---- Response
+        return res.json({
+            summary: {
+                totalRevenue,
+                totalOrders,
+                averageOrderValue: Number(averageOrderValue.toFixed(2)),
+            },
+            salesTrend,
+            orders: orders.map(o => ({
+                _id: o._id,
+                orderToken: o.orderToken,
+                customer: o.customer,
+                amount: o.amount,
+                status: o.status,
+                createdAt: o.createdAt,
+            })),
+        });
+    }
+    catch (err) {
+        console.error("Sales report error:", err);
+        next(err);
+    }
+}));
 exports.default = router;
 //# sourceMappingURL=kitchen.js.map
