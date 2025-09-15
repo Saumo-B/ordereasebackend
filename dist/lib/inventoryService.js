@@ -28,7 +28,8 @@ function deductInventory(orderId) {
                 const ingredient = recipe.ingredient;
                 if (!ingredient)
                     continue;
-                const deduction = item.qty * recipe.qtyRequired;
+                const qtyRequired = parseFloat(recipe.qtyRequired);
+                const deduction = item.qty * qtyRequired;
                 deductions.push({ ingredientId: ingredient._id.toString(), amount: deduction, name: ingredient.name });
             }
         }

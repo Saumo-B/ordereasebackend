@@ -17,7 +17,8 @@ export async function deductInventory(orderId: string) {
       const ingredient = recipe.ingredient as any;
       if (!ingredient) continue;
 
-      const deduction = item.qty * recipe.qtyRequired;
+      const qtyRequired = parseFloat(recipe.qtyRequired as any);
+      const deduction = item.qty * qtyRequired;
       deductions.push({ ingredientId: ingredient._id.toString(), amount: deduction, name: ingredient.name });
     }
   }
