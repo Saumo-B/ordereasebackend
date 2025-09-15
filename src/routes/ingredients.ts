@@ -64,7 +64,9 @@ router.post("/", async (req, res, next) => {
 // Get all ingredients
 router.get("/", async (req, res, next) => {
   try {
-    const ingredients = await Ingredient.find().lean();
+    const ingredients = await Ingredient.find()
+    .select("-createdAt -updatedAt") // exclude fields
+    .lean();
     res.json(ingredients);
   } catch (e) {
     next(e);

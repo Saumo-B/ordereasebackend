@@ -67,7 +67,9 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
 // Get all ingredients
 router.get("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const ingredients = yield Ingredients_1.Ingredient.find().lean();
+        const ingredients = yield Ingredients_1.Ingredient.find()
+            .select("-createdAt -updatedAt") // exclude fields
+            .lean();
         res.json(ingredients);
     }
     catch (e) {
