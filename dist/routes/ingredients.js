@@ -16,23 +16,50 @@ const express_1 = require("express");
 const mongoose_1 = __importDefault(require("mongoose"));
 const Ingredients_1 = require("../models/Ingredients");
 const router = (0, express_1.Router)();
-// Create ingredient
+// // Create ingredient
+// router.post("/", async (req, res, next) => {
+//   try {
+//     const { name, quantity, unit } = req.body;
+//     if (!name || !unit) {
+//       return res.status(400).json({ error: "Name and unit are required" });
+//     }
+//     const ingredient = await Ingredient.create({
+//       name,
+//       unit,
+//       quantity: quantity || 0,
+//     });
+//     res.status(201).json({ message: "Ingredient created", ingredient });
+//   } catch (e: any) {
+//     if (e.code === 11000) {
+//       return res.status(400).json({ error: "Ingredient name already exists" });
+//     }
+//     next(e);
+//   }
+// });
+// Bulk add ingredients
 router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { name, quantity, unit } = req.body;
-        if (!name || !unit) {
-            return res.status(400).json({ error: "Name and unit are required" });
+        const { ingredients } = req.body;
+        if (!Array.isArray(ingredients) || ingredients.length === 0) {
+            return res.status(400).json({ error: "ingredients array is required" });
         }
-        const ingredient = yield Ingredients_1.Ingredient.create({
-            name,
-            unit,
-            quantity: quantity || 0,
+        // Validate each ingredient
+        for (const ing of ingredients) {
+            if (!ing.name || !ing.unit) {
+                return res.status(400).json({ error: "Each ingredient needs name and unit" });
+            }
+        }
+        // Insert in bulk
+        const result = yield Ingredients_1.Ingredient.insertMany(ingredients, { ordered: false });
+        res.status(201).json({
+            message: "Ingredients created successfully",
+            //   ingredients: result,
         });
-        res.status(201).json({ message: "Ingredient created", ingredient });
     }
     catch (e) {
+        // Handle duplicate error (E11000)
         if (e.code === 11000) {
-            return res.status(400).json({ error: "Ingredient name already exists" });
+            return res.status(400).json({ error: "Duplicate ingredient name(s)" });
         }
         next(e);
     }
