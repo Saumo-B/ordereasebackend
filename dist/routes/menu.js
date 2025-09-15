@@ -35,7 +35,7 @@ router.get("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
  */
 router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { name, sku, price, category, description, imageUrl } = req.body;
+        const { name, sku, price, category, description, imageUrl, recipe } = req.body;
         if (!name || !sku || !price) {
             return res.status(400).json({ error: "Name, SKU, and price are required" });
         }
@@ -46,6 +46,7 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             category,
             description,
             imageUrl,
+            recipe,
         });
         res.status(201).json({ message: "Menu item created", item });
     }

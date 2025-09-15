@@ -23,7 +23,7 @@ router.get("/", async (req, res, next) => {
  */
 router.post("/", async (req, res, next) => {
   try {
-    const { name, sku, price, category, description, imageUrl } = req.body;
+    const { name, sku, price, category, description, imageUrl, recipe } = req.body;
 
     if (!name || !sku || !price) {
       return res.status(400).json({ error: "Name, SKU, and price are required" });
@@ -36,6 +36,7 @@ router.post("/", async (req, res, next) => {
       category,
       description,
       imageUrl,
+      recipe,
     });
 
     res.status(201).json({ message: "Menu item created", item });
