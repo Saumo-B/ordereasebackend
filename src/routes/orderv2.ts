@@ -2,8 +2,6 @@ import { Router } from "express";
 import "dotenv/config";
 import { Order } from "../models/Order";
 import { makeToken } from "../lib/token";
-// import mongoose from "mongoose";
-// import { StandardCheckoutClient, Env, StandardCheckoutPayRequest} from "pg-sdk-node";
 
 const router = Router();
 
@@ -12,8 +10,8 @@ router.post("/", async (req, res, next) => {
   try {
     const { items = [], customer } = req.body || {};
     const amount = items.reduce((sum: number, it: any) => sum + it.price * it.qty, 0);
-    const amountDue = amount;
-    const orderToken = await makeToken()
+    const orderToken = await makeToken();
+
     const order = await Order.create({
       status: "created",
       amount,
@@ -21,7 +19,6 @@ router.post("/", async (req, res, next) => {
       lineItems: items,
       customer,
       orderToken,
-      amountDue,
     });
 
     return res.json({
@@ -29,8 +26,9 @@ router.post("/", async (req, res, next) => {
       amount: order.amount,
       currency: order.currency,
       token: order.orderToken,
-     });
+    });
   } catch (e: any) {
+    console.error("Order creation failed:", e);
     return res.status(400).json({ error: e.response?.data || e.message });
   }
 });
