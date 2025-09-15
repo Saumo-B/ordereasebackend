@@ -7,55 +7,29 @@ export async function deductInventory(orderId: string) {
   const order = await Order.findById(orderId);
   if (!order) throw new Error("Order not found");
 
-  const deductions: Record<string, number> = {};
+  console.log("Starting deduction for order", orderId);
 
   for (const item of order.lineItems) {
     const menuItem = await MenuItem.findOne({ sku: item.sku }).populate("recipe.ingredient");
-    if (!menuItem){
-        console.warn(`MenuItem not found for SKU: ${item.sku}`);
-         continue   };
-    console.log(menuItem.recipe.map(r => r.ingredient));
+    if (!menuItem) {
+      console.warn("MenuItem not found for SKU:", item.sku);
+      continue;
+    }
 
-    for (const recipe of menuItem.recipe) { 
-      const ingredientDoc = recipe.ingredient as any;
-      if (!ingredientDoc || !ingredientDoc._id) {
-        throw new Error(`Ingredient missing for menu item ${menuItem.name}`);
+    for (const recipe of menuItem.recipe) {
+      const ingredient = await Ingredient.findById(recipe.ingredient._id);
+      if (!ingredient) continue;
+
+      const deduction = item.qty * recipe.qtyRequired;
+
+      if (ingredient.quantity < deduction) {
+        throw new Error(`Not enough ${ingredient.name} in stock`);
       }
 
-      const qtyRequired = Number(recipe.qtyRequired);
-      if (isNaN(qtyRequired)) {
-        throw new Error(`Invalid qtyRequired for ingredient ${ingredientDoc.name}`);
-      }
+      ingredient.quantity -= deduction;
+      await ingredient.save();
 
-      const deduction = item.qty * qtyRequired;
-      deductions[ingredientDoc._id.toString()] = (deductions[ingredientDoc._id.toString()] || 0) + deduction;
+      console.log(`Deducted ${deduction} ${ingredient.unit} of ${ingredient.name}`);
     }
-  }
-
-  // Fetch all ingredients
-  const ingredientIds = Object.keys(deductions);
-  const ingredients = await Ingredient.find({ _id: { $in: ingredientIds } });
-
-  // Check stock
-  for (const ing of ingredients) {
-    const required = deductions[ing._id.toString()];
-    if (ing.quantity < required) {
-      throw new Error(`Not enough ${ing.name} in stock`);
-    }
-  }
-
-  // Deduct in bulk
-  console.log("Starting deduction for order", orderId);
-  console.log("Deductions map:", deductions);
-  const bulkOps = ingredients.map(ing => ({
-    updateOne: {
-      filter: { _id: ing._id },
-      update: { $inc: { quantity: -deductions[ing._id.toString()] } }
-    }
-  }));
-
-  if (bulkOps.length) {
-    const result = await Ingredient.bulkWrite(bulkOps);
-    console.log("Inventory deducted:", result);
   }
 }
