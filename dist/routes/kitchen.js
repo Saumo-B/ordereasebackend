@@ -14,6 +14,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 require("dotenv/config");
+const inventoryService_1 = require("../lib/inventoryService");
 const Order_1 = require("../models/Order");
 const dayjs_1 = __importDefault(require("dayjs"));
 const utc_1 = __importDefault(require("dayjs/plugin/utc"));
@@ -77,14 +78,15 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
             });
         }
         if (status === "served") {
-            // try {
-            //   await deductInventory(orderId);
-            // } catch (err) {
-            //   if (err instanceof Error) {
-            //     return res.status(400).json({ error: err.message });
-            //   }
-            //   return res.status(400).json({ error: "Unknown error while deducting inventory" });
-            // }
+            try {
+                yield (0, inventoryService_1.deductInventory)(orderId);
+            }
+            catch (err) {
+                if (err instanceof Error) {
+                    return res.status(400).json({ error: err.message });
+                }
+                return res.status(400).json({ error: "Unknown error while deducting inventory" });
+            }
             const order = yield Order_1.Order.findByIdAndUpdate(orderId, { served: true }, { new: true });
             if (!order) {
                 return res.status(404).json({ error: "Order not found" });

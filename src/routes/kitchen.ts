@@ -81,14 +81,14 @@ router.patch("/status/:orderId", async (req, res, next) => {
     }
 
     if (status === "served") {
-      // try {
-      //   await deductInventory(orderId);
-      // } catch (err) {
-      //   if (err instanceof Error) {
-      //     return res.status(400).json({ error: err.message });
-      //   }
-      //   return res.status(400).json({ error: "Unknown error while deducting inventory" });
-      // }
+      try {
+        await deductInventory(orderId);
+      } catch (err) {
+        if (err instanceof Error) {
+          return res.status(400).json({ error: err.message });
+        }
+        return res.status(400).json({ error: "Unknown error while deducting inventory" });
+      }
       const order = await Order.findByIdAndUpdate(
         orderId,
         { served: true },
