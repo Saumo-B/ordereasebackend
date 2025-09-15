@@ -29,37 +29,61 @@ router.get("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
         next(e);
     }
 }));
-/**
- * POST /api/menu
- * Add a new menu item
- */
+// add single menu item
+// router.post("/", async (req, res, next) => {
+//   try {
+//     const { name, sku, price, category, description, imageUrl, recipe } = req.body;
+//     if (!name || !sku || !price) {
+//       return res.status(400).json({ error: "Name, SKU, and price are required" });
+//     }
+//     const item = await MenuItem.create({
+//       name,
+//       sku,
+//       price,
+//       category,
+//       description,
+//       imageUrl,
+//       recipe,
+//     });
+//     res.status(201).json({ message: "Menu item created", item });
+//   } catch (e: unknown) {
+//     // ✅ Narrow the error type
+//     if (e instanceof Error && (e as any).code === 11000) {
+//       return res.status(400).json({ error: "Duplicate SKU or name" });
+//     }
+//     if (e instanceof Error) {
+//       console.error("Menu create error:", e.message);
+//     } else {
+//       console.error("Unknown error:", e);
+//     }
+//     next(e);
+//   }
+// });
+//add bulk menu item
 router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { name, sku, price, category, description, imageUrl, recipe } = req.body;
-        if (!name || !sku || !price) {
-            return res.status(400).json({ error: "Name, SKU, and price are required" });
+        const { menuItems } = req.body;
+        if (!Array.isArray(menuItems) || menuItems.length === 0) {
+            return res.status(400).json({ error: "menuItems array is required" });
         }
-        const item = yield Menu_1.MenuItem.create({
-            name,
-            sku,
-            price,
-            category,
-            description,
-            imageUrl,
-            recipe,
+        // Validate each menu item
+        for (const item of menuItems) {
+            if (!item.name || !item.sku || !item.price) {
+                return res
+                    .status(400)
+                    .json({ error: "Each item must have name, sku, and price" });
+            }
+        }
+        // Insert many at once
+        const result = yield Menu_1.MenuItem.insertMany(menuItems, { ordered: false });
+        return res.status(201).json({
+            message: "Menu items created successfully",
+            //   items: result,
         });
-        res.status(201).json({ message: "Menu item created", item });
     }
     catch (e) {
-        // ✅ Narrow the error type
-        if (e instanceof Error && e.code === 11000) {
-            return res.status(400).json({ error: "Duplicate SKU or name" });
-        }
-        if (e instanceof Error) {
-            console.error("Menu create error:", e.message);
-        }
-        else {
-            console.error("Unknown error:", e);
+        if (e.code === 11000) {
+            return res.status(400).json({ error: "Duplicate SKU or name detected" });
         }
         next(e);
     }
