@@ -13,17 +13,16 @@ exports.deductInventory = deductInventory;
 const Menu_1 = require("../models/Menu");
 const Ingredients_1 = require("../models/Ingredients");
 const Order_1 = require("../models/Order");
-// import mongoose from "mongoose";
 function deductInventory(orderId) {
     return __awaiter(this, void 0, void 0, function* () {
-        const order = yield Order_1.Order.findById(orderId);
+        const order = yield Order_1.Order.findById(orderId).populate("lineItems.menuItem");
         if (!order)
             throw new Error("Order not found");
         console.log("Starting deduction for order", orderId);
         for (const item of order.lineItems) {
-            const menuItem = yield Menu_1.MenuItem.findOne({ sku: item.sku }).populate("recipe.ingredient");
+            const menuItem = yield Menu_1.MenuItem.findById(item.menuItem).populate("recipe.ingredient");
             if (!menuItem) {
-                console.warn("MenuItem not found for SKU:", item.sku);
+                console.warn("MenuItem not found for ID:", item.menuItem);
                 continue;
             }
             for (const recipe of menuItem.recipe) {
@@ -36,7 +35,7 @@ function deductInventory(orderId) {
                 }
                 ingredient.quantity -= deduction;
                 yield ingredient.save();
-                console.log(`Deducted ${deduction} ${ingredient.unit} of ${ingredient.name}`);
+                console.log(`✅ Deducted ${deduction} ${ingredient.unit} of ${ingredient.name}`);
             }
         }
     });

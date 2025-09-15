@@ -6,7 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.Order = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const LineItem = new mongoose_1.default.Schema({
-    sku: { type: String, required: true },
+    menuItem: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "MenuItem", required: true },
     qty: { type: Number, required: true },
     price: { type: Number, required: true }
 });
@@ -14,7 +14,6 @@ const OrderSchema = new mongoose_1.default.Schema({
     phonepeOrderId: { type: String, index: true },
     status: { type: String, enum: ["created", "paid", "done", "failed"], default: "created" },
     amount: { type: Number, required: true },
-    // amountDue: { type: Number, required: true },
     currency: { type: String, default: "INR" },
     served: { type: Boolean, default: false },
     lineItems: [LineItem],
@@ -22,7 +21,7 @@ const OrderSchema = new mongoose_1.default.Schema({
         name: String,
         phone: String
     },
-    orderToken: { type: String }, // filled after payment
+    orderToken: { type: String },
 }, { timestamps: true });
 exports.Order = mongoose_1.default.model("Order", OrderSchema);
 //# sourceMappingURL=Order.js.map

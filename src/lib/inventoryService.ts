@@ -1,18 +1,17 @@
 import { MenuItem } from "../models/Menu";
 import { Ingredient } from "../models/Ingredients";
 import { Order } from "../models/Order";
-// import mongoose from "mongoose";
 
 export async function deductInventory(orderId: string) {
-  const order = await Order.findById(orderId);
+  const order = await Order.findById(orderId).populate("lineItems.menuItem");
   if (!order) throw new Error("Order not found");
 
   console.log("Starting deduction for order", orderId);
 
   for (const item of order.lineItems) {
-    const menuItem = await MenuItem.findOne({ sku: item.sku }).populate("recipe.ingredient");
+    const menuItem = await MenuItem.findById(item.menuItem).populate("recipe.ingredient");
     if (!menuItem) {
-      console.warn("MenuItem not found for SKU:", item.sku);
+      console.warn("MenuItem not found for ID:", item.menuItem);
       continue;
     }
 
@@ -29,7 +28,7 @@ export async function deductInventory(orderId: string) {
       ingredient.quantity -= deduction;
       await ingredient.save();
 
-      console.log(`Deducted ${deduction} ${ingredient.unit} of ${ingredient.name}`);
+      console.log(`✅ Deducted ${deduction} ${ingredient.unit} of ${ingredient.name}`);
     }
   }
 }

@@ -83,7 +83,7 @@ router.patch("/status/:orderId", async (req, res, next) => {
       }
       return res.status(400).json({ error: "Unknown error while deducting inventory" });
     }
-    
+
     order.served = true;
     if (order.status === "paid") order.status = "done";
 
@@ -109,7 +109,7 @@ router.get("/dashboard-stats", async (req, res, next) => {
 
     const todayOrders = await Order.find({
       createdAt: { $gte: startOfDay, $lte: endOfDay },
-    });
+    }).populate("lineItems.menuItem");
 
     if (!todayOrders.length) {
       return res.json({
@@ -145,7 +145,8 @@ router.get("/dashboard-stats", async (req, res, next) => {
     const itemCount: Record<string, number> = {};
     for (const order of todayOrders) {
       for (const item of order.lineItems) {
-        itemCount[item.sku] = (itemCount[item.sku] || 0) + item.qty;
+        const name = (item.menuItem as any)?.name || "Unknown Item";
+        itemCount[name] = (itemCount[name] || 0) + item.qty;
       }
     }
     const topSellingItems = Object.entries(itemCount)

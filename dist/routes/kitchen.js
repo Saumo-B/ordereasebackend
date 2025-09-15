@@ -103,12 +103,13 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
 }));
 // 📊 GET /api/kitchen/dashboard-stats (IST-based)
 router.get("/dashboard-stats", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const startOfDay = (0, dayjs_1.default)().tz(TZ).startOf("day").toDate();
         const endOfDay = (0, dayjs_1.default)().tz(TZ).endOf("day").toDate();
         const todayOrders = yield Order_1.Order.find({
             createdAt: { $gte: startOfDay, $lte: endOfDay },
-        });
+        }).populate("lineItems.menuItem");
         if (!todayOrders.length) {
             return res.json({
                 todayStats: { totalRevenue: 0, totalOrders: 0, averageOrderValue: 0 },
@@ -139,7 +140,8 @@ router.get("/dashboard-stats", (req, res, next) => __awaiter(void 0, void 0, voi
         const itemCount = {};
         for (const order of todayOrders) {
             for (const item of order.lineItems) {
-                itemCount[item.sku] = (itemCount[item.sku] || 0) + item.qty;
+                const name = ((_a = item.menuItem) === null || _a === void 0 ? void 0 : _a.name) || "Unknown Item";
+                itemCount[name] = (itemCount[name] || 0) + item.qty;
             }
         }
         const topSellingItems = Object.entries(itemCount)
