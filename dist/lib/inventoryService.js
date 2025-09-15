@@ -13,38 +13,41 @@ exports.deductInventory = deductInventory;
 const Menu_1 = require("../models/Menu");
 const Ingredients_1 = require("../models/Ingredients");
 const Order_1 = require("../models/Order");
+// import mongoose from "mongoose";
 function deductInventory(orderId) {
     return __awaiter(this, void 0, void 0, function* () {
         const order = yield Order_1.Order.findById(orderId);
         if (!order)
             throw new Error("Order not found");
-        //  Gather all deductions in a map: { ingredientId => totalQtyToDeduct }
         const deductions = {};
         for (const item of order.lineItems) {
             const menuItem = yield Menu_1.MenuItem.findOne({ sku: item.sku }).populate("recipe.ingredient");
-            if (!menuItem || !menuItem.recipe.length)
+            if (!menuItem)
                 continue;
             for (const recipe of menuItem.recipe) {
                 const ingredientDoc = recipe.ingredient;
-                if (!ingredientDoc || !ingredientDoc._id)
-                    continue;
-                const ingredientId = ingredientDoc._id.toString();
+                if (!ingredientDoc || !ingredientDoc._id) {
+                    throw new Error(`Ingredient missing for menu item ${menuItem.name}`);
+                }
                 const qtyRequired = Number(recipe.qtyRequired);
-                const totalDeduction = item.qty * qtyRequired;
-                deductions[ingredientId] = (deductions[ingredientId] || 0) + totalDeduction;
+                if (isNaN(qtyRequired)) {
+                    throw new Error(`Invalid qtyRequired for ingredient ${ingredientDoc.name}`);
+                }
+                const deduction = item.qty * qtyRequired;
+                deductions[ingredientDoc._id.toString()] = (deductions[ingredientDoc._id.toString()] || 0) + deduction;
             }
         }
-        //  Fetch all ingredients in one query
+        // Fetch all ingredients
         const ingredientIds = Object.keys(deductions);
         const ingredients = yield Ingredients_1.Ingredient.find({ _id: { $in: ingredientIds } });
-        // Check if any ingredient is insufficient
+        // Check stock
         for (const ing of ingredients) {
             const required = deductions[ing._id.toString()];
             if (ing.quantity < required) {
                 throw new Error(`Not enough ${ing.name} in stock`);
             }
         }
-        //  Deduct all ingredients in bulk
+        // Deduct in bulk
         const bulkOps = ingredients.map(ing => ({
             updateOne: {
                 filter: { _id: ing._id },
@@ -52,7 +55,8 @@ function deductInventory(orderId) {
             }
         }));
         if (bulkOps.length) {
-            yield Ingredients_1.Ingredient.bulkWrite(bulkOps);
+            const result = yield Ingredients_1.Ingredient.bulkWrite(bulkOps);
+            console.log("Inventory deducted:", result);
         }
     });
 }

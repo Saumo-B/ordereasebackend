@@ -1,36 +1,39 @@
 import { MenuItem } from "../models/Menu";
 import { Ingredient } from "../models/Ingredients";
 import { Order } from "../models/Order";
-import mongoose from "mongoose";
+// import mongoose from "mongoose";
 
 export async function deductInventory(orderId: string) {
   const order = await Order.findById(orderId);
   if (!order) throw new Error("Order not found");
 
-  //  Gather all deductions in a map: { ingredientId => totalQtyToDeduct }
   const deductions: Record<string, number> = {};
 
   for (const item of order.lineItems) {
     const menuItem = await MenuItem.findOne({ sku: item.sku }).populate("recipe.ingredient");
-    if (!menuItem || !menuItem.recipe.length) continue;
+    if (!menuItem) continue;
 
     for (const recipe of menuItem.recipe) {
       const ingredientDoc = recipe.ingredient as any;
-      if (!ingredientDoc || !ingredientDoc._id) continue;
+      if (!ingredientDoc || !ingredientDoc._id) {
+        throw new Error(`Ingredient missing for menu item ${menuItem.name}`);
+      }
 
-      const ingredientId = ingredientDoc._id.toString();
       const qtyRequired = Number(recipe.qtyRequired);
-      const totalDeduction = item.qty * qtyRequired;
+      if (isNaN(qtyRequired)) {
+        throw new Error(`Invalid qtyRequired for ingredient ${ingredientDoc.name}`);
+      }
 
-      deductions[ingredientId] = (deductions[ingredientId] || 0) + totalDeduction;
+      const deduction = item.qty * qtyRequired;
+      deductions[ingredientDoc._id.toString()] = (deductions[ingredientDoc._id.toString()] || 0) + deduction;
     }
   }
 
-  //  Fetch all ingredients in one query
+  // Fetch all ingredients
   const ingredientIds = Object.keys(deductions);
   const ingredients = await Ingredient.find({ _id: { $in: ingredientIds } });
 
-  // Check if any ingredient is insufficient
+  // Check stock
   for (const ing of ingredients) {
     const required = deductions[ing._id.toString()];
     if (ing.quantity < required) {
@@ -38,7 +41,7 @@ export async function deductInventory(orderId: string) {
     }
   }
 
-  //  Deduct all ingredients in bulk
+  // Deduct in bulk
   const bulkOps = ingredients.map(ing => ({
     updateOne: {
       filter: { _id: ing._id },
@@ -47,6 +50,7 @@ export async function deductInventory(orderId: string) {
   }));
 
   if (bulkOps.length) {
-    await Ingredient.bulkWrite(bulkOps);
+    const result = await Ingredient.bulkWrite(bulkOps);
+    console.log("Inventory deducted:", result);
   }
 }

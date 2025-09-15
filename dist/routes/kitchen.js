@@ -73,23 +73,20 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
         }
         // --- Handle "served" status
         if (status === "served") {
-            // Deduct inventory first
             try {
-                yield (0, inventoryService_1.deductInventory)(orderId);
+                yield (0, inventoryService_1.deductInventory)(orderId); // will throw if stock insufficient
             }
             catch (err) {
                 return res.status(400).json({ error: err.message || "Inventory deduction failed" });
             }
-            // Mark as served
+            const order = yield Order_1.Order.findById(orderId);
+            if (!order)
+                return res.status(404).json({ error: "Order not found" });
             order.served = true;
-            // If already paid, mark as done
-            if (order.status === "paid") {
+            if (order.status === "paid")
                 order.status = "done";
-                yield order.save();
-                return res.json({ message: "Order Completed", order });
-            }
             yield order.save();
-            return res.json({ message: "Order is Served", order });
+            return res.json({ message: order.status === "done" ? "Order Completed" : "Order is Served", order });
         }
         // For other statuses ("created", "done", "failed")
         order.status = status;
