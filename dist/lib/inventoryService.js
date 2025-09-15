@@ -18,21 +18,36 @@ function deductInventory(orderId) {
         const order = yield Order_1.Order.findById(orderId);
         if (!order)
             throw new Error("Order not found");
+        // Step 1: Gather all deductions
+        const deductions = [];
         for (const item of order.lineItems) {
             const menuItem = yield Menu_1.MenuItem.findOne({ sku: item.sku }).populate("recipe.ingredient");
-            if (!menuItem)
+            if (!menuItem || !menuItem.recipe.length)
                 continue;
             for (const recipe of menuItem.recipe) {
-                const ingredient = yield Ingredients_1.Ingredient.findById(recipe.ingredient._id);
+                const ingredient = recipe.ingredient;
                 if (!ingredient)
                     continue;
                 const deduction = item.qty * recipe.qtyRequired;
-                if (ingredient.quantity < deduction) {
-                    throw new Error(`Not enough ${ingredient.name} in stock`);
-                }
-                ingredient.quantity -= deduction;
-                yield ingredient.save();
+                deductions.push({ ingredientId: ingredient._id.toString(), amount: deduction, name: ingredient.name });
             }
+        }
+        // Step 2: Check if all ingredients have enough quantity
+        for (const ded of deductions) {
+            const ingredient = yield Ingredients_1.Ingredient.findById(ded.ingredientId);
+            if (!ingredient)
+                throw new Error(`Ingredient not found: ${ded.name}`);
+            if (ingredient.quantity < ded.amount) {
+                throw new Error(`Not enough ${ingredient.name} in stock`);
+            }
+        }
+        // Step 3: Deduct stock
+        for (const ded of deductions) {
+            const ingredient = yield Ingredients_1.Ingredient.findById(ded.ingredientId);
+            if (!ingredient)
+                continue; // this should not happen
+            ingredient.quantity -= ded.amount;
+            yield ingredient.save();
         }
     });
 }
