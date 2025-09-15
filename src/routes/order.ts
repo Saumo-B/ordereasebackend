@@ -14,7 +14,7 @@ router.post("/", async (req, res, next) => {
   try {
     const { items = [], customer } = req.body || {};
     const amount = items.reduce((sum: number, it: any) => sum + it.price * it.qty, 0);
-    const amountDue = amount
+    // const amountDue = amount
     const orderToken = await makeToken()
     const order = await Order.create({
       status: "created",
@@ -22,8 +22,8 @@ router.post("/", async (req, res, next) => {
       currency: "INR",
       lineItems: items,
       customer,
-      orderToken,
-      amountDue,
+      orderToken
+      // amountDue,
     });
 
     const  redirectUrl= `${process.env.BACKEND_ORIGIN!}/api/orders/status?id=${order.id}`;

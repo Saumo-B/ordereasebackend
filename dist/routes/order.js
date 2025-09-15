@@ -26,7 +26,7 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
     try {
         const { items = [], customer } = req.body || {};
         const amount = items.reduce((sum, it) => sum + it.price * it.qty, 0);
-        const amountDue = amount;
+        // const amountDue = amount
         const orderToken = yield (0, token_1.makeToken)();
         const order = yield Order_1.Order.create({
             status: "created",
@@ -34,8 +34,8 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             currency: "INR",
             lineItems: items,
             customer,
-            orderToken,
-            amountDue,
+            orderToken
+            // amountDue,
         });
         const redirectUrl = `${process.env.BACKEND_ORIGIN}/api/orders/status?id=${order.id}`;
         const request = pg_sdk_node_1.StandardCheckoutPayRequest.builder()

@@ -32,10 +32,20 @@ router.get("/today", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
             createdAt: { $gte: startOfDay, $lte: endOfDay },
         })
             .sort({ createdAt: -1 })
+            .populate("lineItems.menuItem", "name") // ✅ only fetch name field
             .lean();
+        // Transform response to replace menuItem with sku=name
+        const transformed = orders.map(order => (Object.assign(Object.assign({}, order), { lineItems: order.lineItems.map((li) => {
+                var _a;
+                return ({
+                    qty: li.qty,
+                    price: li.price,
+                    sku: ((_a = li.menuItem) === null || _a === void 0 ? void 0 : _a.name) || "Unknown" // ✅ return name as sku
+                });
+            }) })));
         return res.json({
-            count: orders.length,
-            orders,
+            count: transformed.length,
+            orders: transformed,
         });
     }
     catch (e) {
