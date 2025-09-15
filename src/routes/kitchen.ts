@@ -40,79 +40,62 @@ router.patch("/status/:orderId", async (req, res, next) => {
     const { orderId } = req.params;
     const { status } = req.body;
 
-    if (!orderId) {
-      return res.status(400).json({ error: "Order ID is required" });
-    }
-
     if (!status) {
       return res.status(400).json({ error: "Status is required in request body" });
     }
 
-    // validate allowed statuses
     const allowedStatuses = ["created", "paid", "done", "failed", "served"];
     if (!allowedStatuses.includes(status)) {
       return res.status(400).json({ error: "Invalid status value" });
     }
 
+    // Fetch order once
+    const order = await Order.findById(orderId);
+    if (!order) return res.status(404).json({ error: "Order not found" });
+
+    // --- Handle "paid" status
     if (status === "paid") {
-      const order = await Order.findByIdAndUpdate(
-        orderId,
-        { status },
-        { new: true }
-      );
+      order.status = "paid";
 
-      if (!order) {
-        return res.status(404).json({ error: "Order not found" });
-      }
-
+      // If already served, mark as done
       if (order.served) {
         order.status = "done";
         await order.save();
-        return res.json({
-          message: `Order Completed`,
-          order,
-        });
+        return res.json({ message: "Order Completed", order });
       }
 
-      return res.json({
-        message: `Order status updated to ${status}`,
-        order,
-      });
+      await order.save();
+      return res.json({ message: "Order status updated to paid", order });
     }
 
+    // --- Handle "served" status
     if (status === "served") {
+      // Deduct inventory first
       try {
         await deductInventory(orderId);
-      } catch (err) {
-        if (err instanceof Error) {
-          return res.status(400).json({ error: err.message });
-        }
-        return res.status(400).json({ error: "Unknown error while deducting inventory" });
-      }
-      const order = await Order.findByIdAndUpdate(
-        orderId,
-        { served: true },
-        { new: true }
-      );
-
-      if (!order) {
-        return res.status(404).json({ error: "Order not found" });
+      } catch (err: any) {
+        return res.status(400).json({ error: err.message || "Inventory deduction failed" });
       }
 
+      // Mark as served
+      order.served = true;
+
+      // If already paid, mark as done
       if (order.status === "paid") {
         order.status = "done";
         await order.save();
-        return res.json({
-          message: `Order Completed`,
-          order,
-        });
+        return res.json({ message: "Order Completed", order });
       }
 
-      return res.json({
-        message: `Order is Served`,
-        order,
-      });
+      await order.save();
+      return res.json({ message: "Order is Served", order });
     }
+
+    // For other statuses ("created", "done", "failed")
+    order.status = status;
+    await order.save();
+    return res.json({ message: `Order status updated to ${status}`, order });
+
   } catch (err) {
     next(err);
   }

@@ -18,37 +18,41 @@ function deductInventory(orderId) {
         const order = yield Order_1.Order.findById(orderId);
         if (!order)
             throw new Error("Order not found");
-        // Step 1: Gather all deductions
-        const deductions = [];
+        //  Gather all deductions in a map: { ingredientId => totalQtyToDeduct }
+        const deductions = {};
         for (const item of order.lineItems) {
             const menuItem = yield Menu_1.MenuItem.findOne({ sku: item.sku }).populate("recipe.ingredient");
             if (!menuItem || !menuItem.recipe.length)
                 continue;
             for (const recipe of menuItem.recipe) {
-                const ingredient = recipe.ingredient;
-                if (!ingredient)
+                const ingredientDoc = recipe.ingredient;
+                if (!ingredientDoc || !ingredientDoc._id)
                     continue;
-                const qtyRequired = parseFloat(recipe.qtyRequired);
-                const deduction = item.qty * qtyRequired;
-                deductions.push({ ingredientId: ingredient._id.toString(), amount: deduction, name: ingredient.name });
+                const ingredientId = ingredientDoc._id.toString();
+                const qtyRequired = Number(recipe.qtyRequired);
+                const totalDeduction = item.qty * qtyRequired;
+                deductions[ingredientId] = (deductions[ingredientId] || 0) + totalDeduction;
             }
         }
-        // Step 2: Check if all ingredients have enough quantity
-        for (const ded of deductions) {
-            const ingredient = yield Ingredients_1.Ingredient.findById(ded.ingredientId);
-            if (!ingredient)
-                throw new Error(`Ingredient not found: ${ded.name}`);
-            if (ingredient.quantity < ded.amount) {
-                throw new Error(`Not enough ${ingredient.name} in stock`);
+        //  Fetch all ingredients in one query
+        const ingredientIds = Object.keys(deductions);
+        const ingredients = yield Ingredients_1.Ingredient.find({ _id: { $in: ingredientIds } });
+        // Check if any ingredient is insufficient
+        for (const ing of ingredients) {
+            const required = deductions[ing._id.toString()];
+            if (ing.quantity < required) {
+                throw new Error(`Not enough ${ing.name} in stock`);
             }
         }
-        // Step 3: Deduct stock
-        for (const ded of deductions) {
-            const ingredient = yield Ingredients_1.Ingredient.findById(ded.ingredientId);
-            if (!ingredient)
-                continue; // this should not happen
-            ingredient.quantity -= ded.amount;
-            yield ingredient.save();
+        //  Deduct all ingredients in bulk
+        const bulkOps = ingredients.map(ing => ({
+            updateOne: {
+                filter: { _id: ing._id },
+                update: { $inc: { quantity: -deductions[ing._id.toString()] } }
+            }
+        }));
+        if (bulkOps.length) {
+            yield Ingredients_1.Ingredient.bulkWrite(bulkOps);
         }
     });
 }
