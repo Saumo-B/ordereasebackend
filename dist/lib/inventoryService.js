@@ -22,8 +22,12 @@ function deductInventory(orderId) {
         const deductions = {};
         for (const item of order.lineItems) {
             const menuItem = yield Menu_1.MenuItem.findOne({ sku: item.sku }).populate("recipe.ingredient");
-            if (!menuItem)
+            if (!menuItem) {
+                console.warn(`MenuItem not found for SKU: ${item.sku}`);
                 continue;
+            }
+            ;
+            console.log(menuItem.recipe.map(r => r.ingredient));
             for (const recipe of menuItem.recipe) {
                 const ingredientDoc = recipe.ingredient;
                 if (!ingredientDoc || !ingredientDoc._id) {
@@ -48,6 +52,8 @@ function deductInventory(orderId) {
             }
         }
         // Deduct in bulk
+        console.log("Starting deduction for order", orderId);
+        console.log("Deductions map:", deductions);
         const bulkOps = ingredients.map(ing => ({
             updateOne: {
                 filter: { _id: ing._id },

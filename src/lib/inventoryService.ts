@@ -11,9 +11,12 @@ export async function deductInventory(orderId: string) {
 
   for (const item of order.lineItems) {
     const menuItem = await MenuItem.findOne({ sku: item.sku }).populate("recipe.ingredient");
-    if (!menuItem) continue;
+    if (!menuItem){
+        console.warn(`MenuItem not found for SKU: ${item.sku}`);
+         continue   };
+    console.log(menuItem.recipe.map(r => r.ingredient));
 
-    for (const recipe of menuItem.recipe) {
+    for (const recipe of menuItem.recipe) { 
       const ingredientDoc = recipe.ingredient as any;
       if (!ingredientDoc || !ingredientDoc._id) {
         throw new Error(`Ingredient missing for menu item ${menuItem.name}`);
@@ -42,6 +45,8 @@ export async function deductInventory(orderId: string) {
   }
 
   // Deduct in bulk
+  console.log("Starting deduction for order", orderId);
+  console.log("Deductions map:", deductions);
   const bulkOps = ingredients.map(ing => ({
     updateOne: {
       filter: { _id: ing._id },
