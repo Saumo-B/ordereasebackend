@@ -22,7 +22,11 @@ const router = (0, express_1.Router)();
  */
 router.get("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const items = yield Menu_1.MenuItem.find().sort({ createdAt: -1 }).lean();
+        // Fetch all menu items but exclude recipe, createdAt, updatedAt
+        const items = yield Menu_1.MenuItem.find()
+            .sort({ createdAt: -1 })
+            .select("-recipe -createdAt -updatedAt") // exclude these fields
+            .lean();
         res.json(items);
     }
     catch (e) {

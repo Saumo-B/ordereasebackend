@@ -10,12 +10,18 @@ const router = Router();
  */
 router.get("/", async (req, res, next) => {
   try {
-    const items = await MenuItem.find().sort({ createdAt: -1 }).lean();
+    // Fetch all menu items but exclude recipe, createdAt, updatedAt
+    const items = await MenuItem.find()
+      .sort({ createdAt: -1 })
+      .select("-recipe -createdAt -updatedAt") // exclude these fields
+      .lean();
+
     res.json(items);
   } catch (e) {
     next(e);
   }
 });
+
 
 // add single menu item
 // router.post("/", async (req, res, next) => {
