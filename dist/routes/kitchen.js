@@ -32,22 +32,17 @@ router.get("/today", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
             createdAt: { $gte: startOfDay, $lte: endOfDay },
         })
             .sort({ createdAt: -1 })
-            .populate("lineItems.menuItem", "name") // ✅ only fetch name field
+            .populate("lineItems.menuItem", "name") // only fetch menuItem name
             .lean();
-        // Transform response
-        const transformed = orders.map(order => ({
-            _id: order._id,
-            status: order.status,
-            amount: order.amount,
-            lineItems: order.lineItems.map((li) => {
+        // Transform: replace menuItem with its name
+        const transformed = orders.map(order => (Object.assign(Object.assign({}, order), { lineItems: order.lineItems.map((li) => {
                 var _a;
                 return ({
                     qty: li.qty,
                     price: li.price,
-                    name: ((_a = li.menuItem) === null || _a === void 0 ? void 0 : _a.name) || "Unknown"
+                    name: ((_a = li.menuItem) === null || _a === void 0 ? void 0 : _a.name) || "Unknown",
                 });
-            })
-        }));
+            }) })));
         return res.json({
             count: transformed.length,
             orders: transformed,
