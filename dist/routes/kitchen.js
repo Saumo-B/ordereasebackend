@@ -65,36 +65,28 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
         if (!allowedStatuses.includes(status)) {
             return res.status(400).json({ error: "Invalid status value" });
         }
-        // Fetch order once
-        const order = yield Order_1.Order.findById(orderId);
-        if (!order)
-            return res.status(404).json({ error: "Order not found" });
-        // --- Handle "paid" status
+        // --- Handle "paid" with atomic update
         if (status === "paid") {
-            if (order.status === "paid") {
+            const order = yield Order_1.Order.findOneAndUpdate({ _id: orderId, status: { $ne: "paid" } }, // only update if NOT already paid
+            { $set: { status: "paid" } }, { new: true });
+            if (!order) {
                 return res.status(409).json({ message: "Order already Paid" });
             }
-            order.status = "paid";
-            // deduct inventory
             try {
                 yield (0, inventoryService_1.deductInventory)(orderId);
             }
             catch (err) {
-                if (err instanceof Error) {
-                    return res.status(400).json({ error: err.message });
-                }
-                return res.status(400).json({ error: "Unknown error while deducting inventory" });
+                return res.status(400).json({ error: err instanceof Error ? err.message : "Inventory error" });
             }
-            // If already served, mark as done
+            // If already served, mark done
             if (order.served) {
                 order.status = "done";
                 yield order.save();
                 return res.json({ message: "Order Completed", order });
             }
-            yield order.save();
             return res.json({ message: "Order status updated to paid", order });
         }
-        // --- Handle "served" status
+        // --- Handle "served" (atomic as well)
         if (status === "served") {
             const order = yield Order_1.Order.findById(orderId);
             if (!order)
@@ -103,11 +95,15 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
             if (order.status === "paid")
                 order.status = "done";
             yield order.save();
-            return res.json({ message: order.status === "done" ? "Order Completed" : "Order is Served", order });
+            return res.json({
+                message: order.status === "done" ? "Order Completed" : "Order is Served",
+                order,
+            });
         }
-        // For other statuses ("created", "done", "failed")
-        order.status = status;
-        yield order.save();
+        // --- Other statuses
+        const order = yield Order_1.Order.findByIdAndUpdate(orderId, { status }, { new: true });
+        if (!order)
+            return res.status(404).json({ error: "Order not found" });
         return res.json({ message: `Order status updated to ${status}`, order });
     }
     catch (err) {

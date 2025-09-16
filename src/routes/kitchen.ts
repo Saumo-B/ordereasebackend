@@ -60,58 +60,59 @@ router.patch("/status/:orderId", async (req, res, next) => {
       return res.status(400).json({ error: "Invalid status value" });
     }
 
-    // Fetch order once
-    const order = await Order.findById(orderId);
-    if (!order) return res.status(404).json({ error: "Order not found" });
-
-    // --- Handle "paid" status
+    // --- Handle "paid" with atomic update
     if (status === "paid") {
-      if( order.status === "paid"){
-        return res.status(409).json({message:"Order already Paid"})
+      const order = await Order.findOneAndUpdate(
+        { _id: orderId, status: { $ne: "paid" } }, // only update if NOT already paid
+        { $set: { status: "paid" } },
+        { new: true }
+      );
+
+      if (!order) {
+        return res.status(409).json({ message: "Order already Paid" });
       }
-      order.status = "paid";
-            // deduct inventory
+
       try {
         await deductInventory(orderId);
       } catch (err) {
-        if (err instanceof Error) {
-          return res.status(400).json({ error: err.message });
-        }
-        return res.status(400).json({ error: "Unknown error while deducting inventory" });
+        return res.status(400).json({ error: err instanceof Error ? err.message : "Inventory error" });
       }
-      // If already served, mark as done
+
+      // If already served, mark done
       if (order.served) {
         order.status = "done";
         await order.save();
         return res.json({ message: "Order Completed", order });
       }
 
-      await order.save();
       return res.json({ message: "Order status updated to paid", order });
     }
 
-    // --- Handle "served" status
+    // --- Handle "served" (atomic as well)
     if (status === "served") {
-      
-    const order = await Order.findById(orderId);
+      const order = await Order.findById(orderId);
+      if (!order) return res.status(404).json({ error: "Order not found" });
+
+      order.served = true;
+      if (order.status === "paid") order.status = "done";
+
+      await order.save();
+      return res.json({
+        message: order.status === "done" ? "Order Completed" : "Order is Served",
+        order,
+      });
+    }
+
+    // --- Other statuses
+    const order = await Order.findByIdAndUpdate(orderId, { status }, { new: true });
     if (!order) return res.status(404).json({ error: "Order not found" });
 
-    order.served = true;
-    if (order.status === "paid") order.status = "done";
-
-    await order.save();
-    return res.json({ message: order.status === "done" ? "Order Completed" : "Order is Served", order });
-  }
-
-    // For other statuses ("created", "done", "failed")
-    order.status = status;
-    await order.save();
     return res.json({ message: `Order status updated to ${status}`, order });
-
   } catch (err) {
     next(err);
   }
 });
+
 
 // 📊 GET /api/kitchen/dashboard-stats (IST-based)
 router.get("/dashboard-stats", async (req, res, next) => {
