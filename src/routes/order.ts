@@ -14,33 +14,54 @@ const client= StandardCheckoutClient.getInstance(process.env.MERCHANT_ID!,proces
 router.post("/", async (req, res, next) => {
   try {
     const { items = [], customer } = req.body || {};
+
+    // 🔹 Validate items
+    for (const { menuItem, qty, price } of items) {
+      if (!menuItem || !qty || !price) {
+        return res.status(400).json({ error: "menuItem, qty and price are required" });
+      }
+
+      // Ensure menuItem exists
+      const menuDoc = await MenuItem.findById(menuItem);
+      if (!menuDoc) {
+        return res.status(400).json({ error: `MenuItem not found: ${menuItem}` });
+      }
+
+      if (qty <= 0) {
+        return res.status(400).json({ error: `Invalid qty for ${menuDoc.name}` });
+      }
+      if (price <= 0) {
+        return res.status(400).json({ error: `Invalid price for ${menuDoc.name}` });
+      }
+    }
+
+    // 🔹 Calculate total
     const amount = items.reduce((sum: number, it: any) => sum + it.price * it.qty, 0);
-    // const amountDue = amount
-    const orderToken = await makeToken()
+
+    // 🔹 Create order
+    const orderToken = await makeToken();
     const order = await Order.create({
       status: "created",
       amount,
       currency: "INR",
       lineItems: items,
       customer,
-      orderToken
-      // amountDue,
+      orderToken,
     });
 
-    const  redirectUrl= `${process.env.BACKEND_ORIGIN!}/api/orders/status?id=${order.id}`;
+    // 🔹 Setup redirect URL for PhonePe
+    const redirectUrl = `${process.env.BACKEND_ORIGIN!}/api/orders/status?id=${order.id}`;
+
     const request = StandardCheckoutPayRequest.builder()
-    .merchantOrderId(orderToken)
-    .amount(amount*100)
-    .redirectUrl(redirectUrl)
-    .build()
-    const response = await client.pay(request)
+      .merchantOrderId(orderToken)
+      .amount(amount * 100) // paise
+      .redirectUrl(redirectUrl)
+      .build();
+
+    const response = await client.pay(request);
 
     return res.json({
-      // id: order.id,
-      // amount: order.amount,
-      // currency: order.currency,
-      // token: order.orderToken,
-      checkoutPageUrl:response.redirectUrl // include PhonePe response
+      checkoutPageUrl: response.redirectUrl,
     });
   } catch (e: any) {
     console.error("PhonePe error:", e.response?.data || e.message);

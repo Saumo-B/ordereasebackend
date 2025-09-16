@@ -33,6 +33,22 @@ router.get("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
         next(e);
     }
 }));
+//Get details of single item
+router.get("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { id } = req.params;
+        const item = yield Menu_1.MenuItem.findById(id)
+            .populate("recipe.ingredient", "name unit quantity") // fetch ingredient details
+            .lean();
+        if (!item) {
+            return res.status(404).json({ error: "Menu item not found" });
+        }
+        res.json(item);
+    }
+    catch (e) {
+        next(e);
+    }
+}));
 // add single menu item
 // router.post("/", async (req, res, next) => {
 //   try {

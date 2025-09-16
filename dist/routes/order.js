@@ -26,8 +26,26 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
     var _a, _b;
     try {
         const { items = [], customer } = req.body || {};
+        // 🔹 Validate items
+        for (const { menuItem, qty, price } of items) {
+            if (!menuItem || !qty || !price) {
+                return res.status(400).json({ error: "menuItem, qty and price are required" });
+            }
+            // Ensure menuItem exists
+            const menuDoc = yield Menu_1.MenuItem.findById(menuItem);
+            if (!menuDoc) {
+                return res.status(400).json({ error: `MenuItem not found: ${menuItem}` });
+            }
+            if (qty <= 0) {
+                return res.status(400).json({ error: `Invalid qty for ${menuDoc.name}` });
+            }
+            if (price <= 0) {
+                return res.status(400).json({ error: `Invalid price for ${menuDoc.name}` });
+            }
+        }
+        // 🔹 Calculate total
         const amount = items.reduce((sum, it) => sum + it.price * it.qty, 0);
-        // const amountDue = amount
+        // 🔹 Create order
         const orderToken = yield (0, token_1.makeToken)();
         const order = yield Order_1.Order.create({
             status: "created",
@@ -35,22 +53,18 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             currency: "INR",
             lineItems: items,
             customer,
-            orderToken
-            // amountDue,
+            orderToken,
         });
+        // 🔹 Setup redirect URL for PhonePe
         const redirectUrl = `${process.env.BACKEND_ORIGIN}/api/orders/status?id=${order.id}`;
         const request = pg_sdk_node_1.StandardCheckoutPayRequest.builder()
             .merchantOrderId(orderToken)
-            .amount(amount * 100)
+            .amount(amount * 100) // paise
             .redirectUrl(redirectUrl)
             .build();
         const response = yield client.pay(request);
         return res.json({
-            // id: order.id,
-            // amount: order.amount,
-            // currency: order.currency,
-            // token: order.orderToken,
-            checkoutPageUrl: response.redirectUrl // include PhonePe response
+            checkoutPageUrl: response.redirectUrl,
         });
     }
     catch (e) {
