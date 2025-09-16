@@ -72,6 +72,16 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
         // --- Handle "paid" status
         if (status === "paid") {
             order.status = "paid";
+            // deduct inventory
+            try {
+                yield (0, inventoryService_1.deductInventory)(orderId);
+            }
+            catch (err) {
+                if (err instanceof Error) {
+                    return res.status(400).json({ error: err.message });
+                }
+                return res.status(400).json({ error: "Unknown error while deducting inventory" });
+            }
             // If already served, mark as done
             if (order.served) {
                 order.status = "done";
@@ -86,16 +96,6 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
             const order = yield Order_1.Order.findById(orderId);
             if (!order)
                 return res.status(404).json({ error: "Order not found" });
-            // deduct inventory
-            try {
-                yield (0, inventoryService_1.deductInventory)(orderId);
-            }
-            catch (err) {
-                if (err instanceof Error) {
-                    return res.status(400).json({ error: err.message });
-                }
-                return res.status(400).json({ error: "Unknown error while deducting inventory" });
-            }
             order.served = true;
             if (order.status === "paid")
                 order.status = "done";
