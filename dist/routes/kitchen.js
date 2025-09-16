@@ -71,6 +71,9 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
             return res.status(404).json({ error: "Order not found" });
         // --- Handle "paid" status
         if (status === "paid") {
+            if (order.status === "paid") {
+                return res.status(409).json({ message: "Order already Paid" });
+            }
             order.status = "paid";
             // deduct inventory
             try {
