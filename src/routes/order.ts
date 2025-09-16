@@ -3,6 +3,7 @@ import "dotenv/config";
 import { Order } from "../models/Order";
 import { makeToken } from "../lib/token";
 import mongoose from "mongoose";
+import { MenuItem } from "../models/Menu";
 import { StandardCheckoutClient, Env, StandardCheckoutPayRequest} from "pg-sdk-node";
 
 const router = Router();
@@ -186,13 +187,14 @@ router.get("/detail", async (req, res, next) => {
 
 // PATCH /api/orders/:id
 
+
 router.patch("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
     const { items = [], customer } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: "Invalid MongoDB ObjectId" });
+      return res.status(400).json({ error: "Invalid MongoDB ObjectId for order" });
     }
 
     const order = await Order.findById(id);
@@ -203,13 +205,23 @@ router.patch("/:id", async (req, res, next) => {
       return res.status(400).json({ error: "Paid orders cannot be updated" });
     }
 
-    // Validate and replace items
-    for (const { sku, qty, price } of items) {
-      if (!sku || !Number.isFinite(qty) || qty <= 0) {
-        return res.status(400).json({ error: `Invalid qty for sku ${sku || "(missing)"}` });
+    // Validate items
+    for (const { menuItem, qty, price } of items) {
+      if (!mongoose.Types.ObjectId.isValid(menuItem)) {
+        return res.status(400).json({ error: `Invalid menuItem ID: ${menuItem}` });
       }
+
+      const menuDoc = await MenuItem.findById(menuItem);
+      if (!menuDoc) {
+        return res.status(400).json({ error: `MenuItem not found: ${menuItem}` });
+      }
+
+      if (!Number.isFinite(qty) || qty <= 0) {
+        return res.status(400).json({ error: `Invalid qty for menuItem ${menuDoc.name}` });
+      }
+
       if (!Number.isFinite(price) || price <= 0) {
-        return res.status(400).json({ error: `Missing/invalid price for sku ${sku}` });
+        return res.status(400).json({ error: `Missing/invalid price for menuItem ${menuDoc.name}` });
       }
     }
 
@@ -238,6 +250,7 @@ router.patch("/:id", async (req, res, next) => {
     next(e);
   }
 });
+
 
 router.delete("/:orderId", async (req, res, next) => {
   try {

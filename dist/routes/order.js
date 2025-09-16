@@ -17,6 +17,7 @@ require("dotenv/config");
 const Order_1 = require("../models/Order");
 const token_1 = require("../lib/token");
 const mongoose_1 = __importDefault(require("mongoose"));
+const Menu_1 = require("../models/Menu");
 const pg_sdk_node_1 = require("pg-sdk-node");
 const router = (0, express_1.Router)();
 const client = pg_sdk_node_1.StandardCheckoutClient.getInstance(process.env.MERCHANT_ID, process.env.SALT_KEY, parseInt(process.env.SALT_INDEX), pg_sdk_node_1.Env.SANDBOX);
@@ -177,7 +178,7 @@ router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         const { id } = req.params;
         const { items = [], customer } = req.body;
         if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ error: "Invalid MongoDB ObjectId" });
+            return res.status(400).json({ error: "Invalid MongoDB ObjectId for order" });
         }
         const order = yield Order_1.Order.findById(id);
         if (!order)
@@ -186,13 +187,20 @@ router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         if (order.status === "paid") {
             return res.status(400).json({ error: "Paid orders cannot be updated" });
         }
-        // Validate and replace items
-        for (const { sku, qty, price } of items) {
-            if (!sku || !Number.isFinite(qty) || qty <= 0) {
-                return res.status(400).json({ error: `Invalid qty for sku ${sku || "(missing)"}` });
+        // Validate items
+        for (const { menuItem, qty, price } of items) {
+            if (!mongoose_1.default.Types.ObjectId.isValid(menuItem)) {
+                return res.status(400).json({ error: `Invalid menuItem ID: ${menuItem}` });
+            }
+            const menuDoc = yield Menu_1.MenuItem.findById(menuItem);
+            if (!menuDoc) {
+                return res.status(400).json({ error: `MenuItem not found: ${menuItem}` });
+            }
+            if (!Number.isFinite(qty) || qty <= 0) {
+                return res.status(400).json({ error: `Invalid qty for menuItem ${menuDoc.name}` });
             }
             if (!Number.isFinite(price) || price <= 0) {
-                return res.status(400).json({ error: `Missing/invalid price for sku ${sku}` });
+                return res.status(400).json({ error: `Missing/invalid price for menuItem ${menuDoc.name}` });
             }
         }
         // ✅ Replace items instead of merging
