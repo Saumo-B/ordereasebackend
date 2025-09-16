@@ -25,13 +25,15 @@ router.get("/today", async (req, res, next) => {
       .populate("lineItems.menuItem", "name") // ✅ only fetch name field
       .lean();
 
-    // Transform response to replace menuItem with sku=name
+    // Transform response
     const transformed = orders.map(order => ({
-      ...order,
+      _id: order._id,
+      status: order.status,
+      amount: order.amount,
       lineItems: order.lineItems.map((li: any) => ({
         qty: li.qty,
         price: li.price,
-        sku: li.menuItem?.name || "Unknown" // ✅ return name as sku
+        name: li.menuItem?.name || "Unknown"
       }))
     }));
 
@@ -44,7 +46,6 @@ router.get("/today", async (req, res, next) => {
     next(e);
   }
 });
-
 
 // PATCH /api/kitchen/status/:orderId
 router.patch("/status/:orderId", async (req, res, next) => {
