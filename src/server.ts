@@ -1,6 +1,8 @@
 import "dotenv/config";
 import express from "express";
 import helmet from "helmet";
+import fs from "fs";
+import path from "path";
 import cors from "cors";
 import mongoose from "mongoose";
 import orders from "./routes/order";
@@ -10,9 +12,18 @@ import orderv2s from "./routes/orderv2";
 import menu from "./routes/menu";
 import ingredients from "./routes/ingredients";
 import table from "./routes/table"
+import swaggerUi from "swagger-ui-express";
+import swaggerFile from "./swagger-output.json";
 
+
+const cssPath = path.join(__dirname, "swagger-dark.css");
+const customCss = fs.readFileSync(cssPath, "utf8");
 const app = express();
-
+app.use(cors({
+  origin: "*",  // or restrict to your frontend domain
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 app.get('/',(req,res)=> {
   return res.send('Payment engine is Running')
 })
@@ -35,6 +46,25 @@ app.use("/api/menu", menu);
 app.use("/api/table", table);
 app.use("/api/ingredients", ingredients);
 
+
+app.use(
+  "/api/docs",
+  // Allow Swagger UI scripts, styles, and XHR
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https:"],
+      imgSrc: ["'self'", "data:", "https:"],
+      connectSrc: ["'self'", "https:"]
+    }
+  }),
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerFile, {
+    customCss,
+    customSiteTitle: "Orderease API Docs (Dark)"
+  })
+);
 mongoose.connect(process.env.MONGODB_URI!)
   .then(() => {
     console.log("Connected to database!");

@@ -1,0 +1,40 @@
+body, .swagger-ui {
+  background: #0b0b0d !important;
+  color: #e6eef6 !important;
+}
+
+/* topbar */
+.swagger-ui .topbar { background: #0f1720 !important; box-shadow: none; }
+
+/* headings / tags */
+.swagger-ui .info h1, 
+.swagger-ui .info p, 
+.swagger-ui .scheme-container { color: #e6eef6 !important; }
+.opblock .opblock-summary { background: #0f1720 !important; border: 1px solid #1f2937 !important; }
+
+/* scheme-container */
+.swagger-ui .scheme-container {
+  background: #0f1720 !important;
+  color: #e6eef6 !important;
+  border: 1px solid #1f2937 !important;
+}
+
+/* operation panels */
+.opblock {
+  background: #071224 !important;
+  border-color: #112233 !important;
+}
+.opblock .opblock-summary-method, 
+.opblock .opblock-summary-path { color: #cfe8ff !important; }
+
+/* request / response boxes */
+.responses-wrapper, .schema, .parameters { background: #071224 !important; color: #d7e7f7 !important; border: 1px solid #14232e !important; }
+
+/* buttons & inputs */
+.btn, .try-out, input, textarea, select { background: #112026 !important; color: #e6eef6 !important; border: 1px solid #20323a !important; }
+
+/* code blocks */
+.prettyprint, pre, code { background: #061216 !important; color: #cfe8ff !important; }
+
+/* links */
+a { color: #7dd3fc !important; }

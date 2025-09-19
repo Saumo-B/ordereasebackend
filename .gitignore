@@ -43,6 +43,10 @@ next-env.d.ts
 .genkit/*
 .env*
 
+#swagger
+# *swagger.ts
+# *swagger-dark.css
+
 # firebase
 firebase-debug.log
 firestore-debug.log
