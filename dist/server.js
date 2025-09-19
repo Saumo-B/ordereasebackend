@@ -6,8 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 require("dotenv/config");
 const express_1 = __importDefault(require("express"));
 const helmet_1 = __importDefault(require("helmet"));
-const fs_1 = __importDefault(require("fs"));
-const path_1 = __importDefault(require("path"));
 const cors_1 = __importDefault(require("cors"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const order_1 = __importDefault(require("./routes/order"));
@@ -19,8 +17,18 @@ const ingredients_1 = __importDefault(require("./routes/ingredients"));
 const table_1 = __importDefault(require("./routes/table"));
 const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
 const swagger_output_json_1 = __importDefault(require("./swagger-output.json"));
-const cssPath = path_1.default.join(__dirname, "swagger-dark.css");
-const customCss = fs_1.default.readFileSync(cssPath, "utf8");
+const customCss = `
+body, .swagger-ui {
+  background: #0b0b0d !important;
+  color: #e6eef6 !important;
+}
+/* ... rest of your dark CSS ... */
+.swagger-ui .scheme-container {
+  background: #0f1720 !important;
+  color: #e6eef6 !important;
+  border: 1px solid #1f2937 !important;
+}
+`;
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)({
     origin: "*", // or restrict to your frontend domain
@@ -47,17 +55,7 @@ app.use("/api/orderv2", orderv2_1.default);
 app.use("/api/menu", menu_1.default);
 app.use("/api/table", table_1.default);
 app.use("/api/ingredients", ingredients_1.default);
-app.use("/api/docs", 
-// Allow Swagger UI scripts, styles, and XHR
-helmet_1.default.contentSecurityPolicy({
-    directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https:"],
-        scriptSrc: ["'self'", "'unsafe-inline'", "https:"],
-        imgSrc: ["'self'", "data:", "https:"],
-        connectSrc: ["'self'", "https:"]
-    }
-}), swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swagger_output_json_1.default, {
+app.use("/api/docs", swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swagger_output_json_1.default, {
     customCss,
     customSiteTitle: "Orderease API Docs (Dark)"
 }));
