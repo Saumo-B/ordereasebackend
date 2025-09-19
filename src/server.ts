@@ -62,8 +62,11 @@ app.use(
   "/api/docs",
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec, {
-    customCss,
-    customSiteTitle: "Orderease API Docs (Dark)"
+    customCss: customCss,         // inline dark theme
+    customSiteTitle: "Orderease API Docs (Dark)",
+    swaggerOptions: {
+      docExpansion: "none"
+    }
   })
 );
 

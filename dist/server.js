@@ -57,8 +57,11 @@ app.use("/api/menu", menu_1.default);
 app.use("/api/table", table_1.default);
 app.use("/api/ingredients", ingredients_1.default);
 app.use("/api/docs", swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swagger_1.default, {
-    customCss,
-    customSiteTitle: "Orderease API Docs (Dark)"
+    customCss: customCss, // inline dark theme
+    customSiteTitle: "Orderease API Docs (Dark)",
+    swaggerOptions: {
+        docExpansion: "none"
+    }
 }));
 mongoose_1.default.connect(process.env.MONGODB_URI)
     .then(() => {
