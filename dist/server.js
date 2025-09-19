@@ -16,18 +16,19 @@ const menu_1 = __importDefault(require("./routes/menu"));
 const ingredients_1 = __importDefault(require("./routes/ingredients"));
 const table_1 = __importDefault(require("./routes/table"));
 const swagger_ui_express_1 = __importDefault(require("swagger-ui-express"));
-const swagger_output_json_1 = __importDefault(require("./swagger-output.json"));
+// import swaggerFile from "./swagger-output.json";
+const swagger_1 = __importDefault(require("./swagger"));
 const customCss = `
-body, .swagger-ui {
-  background: #0b0b0d !important;
-  color: #e6eef6 !important;
-}
-/* ... rest of your dark CSS ... */
-.swagger-ui .scheme-container {
-  background: #0f1720 !important;
-  color: #e6eef6 !important;
-  border: 1px solid #1f2937 !important;
-}
+body, .swagger-ui { background: #0b0b0d !important; color: #e6eef6 !important; }
+.swagger-ui .topbar { background: #0f1720 !important; box-shadow: none; }
+.swagger-ui .info h1, .swagger-ui .info p, .swagger-ui .scheme-container { color: #e6eef6 !important; }
+.swagger-ui .scheme-container { background: #0f1720 !important; color: #e6eef6 !important; border: 1px solid #1f2937 !important; }
+.opblock { background: #071224 !important; border-color: #112233 !important; }
+.opblock .opblock-summary-method, .opblock .opblock-summary-path { color: #cfe8ff !important; }
+.responses-wrapper, .schema, .parameters { background: #071224 !important; color: #d7e7f7 !important; border: 1px solid #14232e !important; }
+.btn, .try-out, input, textarea, select { background: #112026 !important; color: #e6eef6 !important; border: 1px solid #20323a !important; }
+.prettyprint, pre, code { background: #061216 !important; color: #cfe8ff !important; }
+a { color: #7dd3fc !important; }
 `;
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)({
@@ -55,7 +56,7 @@ app.use("/api/orderv2", orderv2_1.default);
 app.use("/api/menu", menu_1.default);
 app.use("/api/table", table_1.default);
 app.use("/api/ingredients", ingredients_1.default);
-app.use("/api/docs", swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swagger_output_json_1.default, {
+app.use("/api/docs", swagger_ui_express_1.default.serve, swagger_ui_express_1.default.setup(swagger_1.default, {
     customCss,
     customSiteTitle: "Orderease API Docs (Dark)"
 }));
