@@ -7,6 +7,7 @@ exports.Order = void 0;
 const mongoose_1 = __importDefault(require("mongoose"));
 const LineItem = new mongoose_1.default.Schema({
     menuItem: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "MenuItem", required: true },
+    served: { type: Boolean, default: false },
     qty: { type: Number, required: true },
     price: { type: Number, required: true }
 });

@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const LineItem = new mongoose.Schema({
   menuItem: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItem", required: true },
+  served: { type: Boolean, default: false },
   qty: { type: Number, required: true },
   price: { type: Number, required: true } 
 });

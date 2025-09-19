@@ -93,10 +93,21 @@ router.patch("/status/:orderId", async (req, res, next) => {
       const order = await Order.findById(orderId);
       if (!order) return res.status(404).json({ error: "Order not found" });
 
+      // mark order as served
       order.served = true;
-      if (order.status === "paid") order.status = "done";
+
+      // mark all line items as served
+      order.lineItems.forEach(item => {
+        item.served = true;
+      });
+
+      // if already paid, close the order
+      if (order.status === "paid") {
+        order.status = "done";
+      }
 
       await order.save();
+
       return res.json({
         message: order.status === "done" ? "Order Completed" : "Order is Served",
         order,
