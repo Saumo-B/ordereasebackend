@@ -6,9 +6,9 @@
     "dev1": "ts-node-dev --respawn --transpile-only src/server.ts",
     "dev2": "nodemon src/server.ts",
     "dev": "nodemon",
-    "build-swagger": "ts-node src/swagger.ts",
+    "build-swagger": "ts-node src/swagger-gen.ts",
     "ts.check": "tsc --project tsconfig.json",
-    "build": "rimraf dist && tsc",
+    "build": "rimraf dist && tsc && node copy-swagger-assets.js",
     "add-build": "git add dist",
     "start": "nodemon src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -37,6 +37,7 @@
     "@types/node": "^20.19.11",
     "@types/swagger-ui-express": "^4.1.8",
     "swagger-autogen": "^2.23.7",
+    "swagger-ui-dist": "^5.29.0",
     "ts-node": "^10.9.2",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.2"

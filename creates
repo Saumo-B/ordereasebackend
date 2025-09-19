@@ -1,0 +1,5 @@
+
+> payment-engine@1.0.0 build
+> rimraf dist && tsc && node copy-swagger-assets.js # runs tsc then copy-swagger-assets.js - dist/docs-assets
+
+Wrote dist/docs/index.html and copied docs-assets.

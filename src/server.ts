@@ -3,6 +3,7 @@ import express from "express";
 import helmet from "helmet";
 import cors from "cors";
 import mongoose from "mongoose";
+import path from "path";
 
 import orders from "./routes/order";
 import kitchens from "./routes/kitchen";
@@ -10,45 +11,64 @@ import myorders from "./routes/myorder";
 import orderv2s from "./routes/orderv2";
 import menu from "./routes/menu";
 import ingredients from "./routes/ingredients";
-import table from "./routes/table"
+import table from "./routes/table";
 
-import swaggerUi from "swagger-ui-express";
-// import swaggerFile from "./swagger-output.json";
-import swaggerSpec from "./swagger";
+// load swagger JSON at runtime (try dist first, fallback to project root)
+let swaggerSpec: any;
+try {
+  swaggerSpec = require(path.join(__dirname, "swagger-output.json"));
+} catch (e) {
+  // running locally (src), fall back to project root
+  swaggerSpec = require(path.join(process.cwd(), "swagger-output.json"));
+}
 
-const customCss = `
-body, .swagger-ui { background: #0b0b0d !important; color: #e6eef6 !important; }
-.swagger-ui .topbar { background: #0f1720 !important; box-shadow: none; }
-.swagger-ui .info h1, .swagger-ui .info p, .swagger-ui .scheme-container { color: #e6eef6 !important; }
-.swagger-ui .scheme-container { background: #0f1720 !important; color: #e6eef6 !important; border: 1px solid #1f2937 !important; }
-.opblock { background: #071224 !important; border-color: #112233 !important; }
-.opblock .opblock-summary-method, .opblock .opblock-summary-path { color: #cfe8ff !important; }
-.responses-wrapper, .schema, .parameters { background: #071224 !important; color: #d7e7f7 !important; border: 1px solid #14232e !important; }
-.btn, .try-out, input, textarea, select { background: #112026 !important; color: #e6eef6 !important; border: 1px solid #20323a !important; }
-.prettyprint, pre, code { background: #061216 !important; color: #cfe8ff !important; }
-a { color: #7dd3fc !important; }
-`;
-
+// Express app
 const app = express();
-app.use(cors({
-  origin: "*",  // or restrict to your frontend domain
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
-app.get('/',(req,res)=> {
-  return res.send('Payment engine is Running')
-})
-// app.get("/token", (req, res) =>{
-//   try {
-//     const token = makeToken();
-//     res.json({token});
-//   } catch (e) { next(e);}
-// })
-app.use(helmet());
-app.use(cors()); // allow everything
-//app.use(cors({ origin: process.env.FRONTEND_ORIGIN?.split(",") || true }));
-app.use(express.json()); // for normal routes (webhook route handles raw body itself)
 
+// Helmet + CSP as before (optional adjust)
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "'unsafe-inline'", "https:"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https:"],
+        imgSrc: ["'self'", "data:", "https:"],
+        connectSrc: ["'self'", "https:"]
+      }
+    }
+  })
+);
+
+// CORS
+app.use(cors({ origin: "*", methods: ["GET","POST","PUT","PATCH","DELETE","OPTIONS"], allowedHeaders: ["Content-Type","Authorization"] }));
+app.use(express.json());
+
+// serve docs-assets:
+// - in production, static files were copied to dist/docs-assets
+// - in dev, serve directly from swagger-ui-dist so you don't need to copy manually
+let docsAssetsPath: string;
+if (process.env.NODE_ENV === "production") {
+  docsAssetsPath = path.join(__dirname, "docs-assets"); // dist/docs-assets
+} else {
+  // dev: serve straight from node_modules
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const swaggerUiDist = require("swagger-ui-dist");
+  docsAssetsPath = swaggerUiDist.getAbsoluteFSPath();
+}
+app.use("/docs-assets", express.static(docsAssetsPath, { maxAge: "1d" }));
+
+// Expose the swagger JSON to the browser as /api/swagger.json
+app.get("/api/swagger.json", (req, res) => {
+  const deployedUrl = process.env.BASE_URL || `${req.protocol}://${req.get("host")}`;
+  const specWithServer = {
+    ...swaggerSpec,
+    servers: [{ url: deployedUrl, description: "Deployed API" }],
+  };
+  res.json(specWithServer);
+});
+
+// Your existing API routes
 app.use("/api/orders", orders);
 app.use("/api/kitchen", kitchens);
 app.use("/api/myorder", myorders);
@@ -56,28 +76,46 @@ app.use("/api/orderv2", orderv2s);
 app.use("/api/menu", menu);
 app.use("/api/table", table);
 app.use("/api/ingredients", ingredients);
+app.get("/docs", (req, res) => {
+  // If running in production, Vercel serves dist/docs/index.html directly (see vercel.json).
+  // For local dev, just return a generated HTML that uses /docs-assets.
+  if (process.env.NODE_ENV === "production") {
+    res.sendFile(path.join(__dirname, "docs", "index.html"));
+  } else {
+    // generate the tiny HTML (same as dist/docs/index.html)
+    res.send(`
+      <!doctype html><html><head>
+        <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+        <title>Orderease API Docs</title>
+        <link rel="stylesheet" href="/docs-assets/swagger-ui.css">
+        <style>
+          .swagger-ui { background:#0b0b0d; color:#e6eef6; }
+          .swagger-ui .topbar { background:#0f1720 !important; box-shadow:none !important; }
+        </style>
+      </head><body><div id="swagger-ui"></div>
+      <script src="/docs-assets/swagger-ui-bundle.js"></script>
+      <script src="/docs-assets/swagger-ui-standalone-preset.js"></script>
+      <script>
+        window.onload = function() {
+          SwaggerUIBundle({
+            url: "/api/swagger.json",
+            dom_id: "#swagger-ui",
+            presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+            layout: "StandaloneLayout",
+            deepLinking: true
+          });
+        };
+      </script></body></html>
+    `);
+  }
+});
 
+app.get("/", (req, res) => res.send("Payment engine is Running"));
 
-app.use(
-  "/api/docs",
-  swaggerUi.serve,
-  swaggerUi.setup(swaggerSpec, {
-    customCss: customCss,         // inline dark theme
-    customSiteTitle: "Orderease API Docs (Dark)",
-    swaggerOptions: {
-      docExpansion: "none"
-    }
-  })
-);
-
-mongoose.connect(process.env.MONGODB_URI!)
-  .then(() => {
-    console.log("Connected to database!");
-    app.listen(process.env.PORT  , () => {
-    console.log("Server listening on", process.env.PORT );
-    });
-  })
-  .catch(() => {
-    console.log("Connection failed!");
+// DB check
+mongoose.connect(process.env.MONGODB_URI!).then(() => {
+  console.log("Connected to database!");
+  app.listen(process.env.PORT, () => {
+    console.log("Server listening on", process.env.PORT);
   });
-
+}).catch(err => console.error("DB connect fail", err));
