@@ -3,12 +3,15 @@
   "version": "1.0.0",
   "main": "dist/server.js",
   "scripts": {
+    "clean": "rimraf dist",
     "dev1": "ts-node-dev --respawn --transpile-only src/server.ts",
     "dev2": "nodemon src/server.ts",
     "dev": "nodemon",
     "build-swagger": "ts-node src/swagger-gen.ts",
+    "build-ts": "tsc",
+    "copy-docs": "node copy-swagger-assets.js",
+    "build": "npm run clean && npm run build-swagger && npm run build-ts && npm run copy-docs",
     "ts.check": "tsc --project tsconfig.json",
-    "build": "rimraf dist && tsc && node copy-swagger-assets.js",
     "add-build": "git add dist",
     "start": "nodemon src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"

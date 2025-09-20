@@ -15,4 +15,5 @@ router.patch("/:id/status", updateTableStatus);
 router.delete("/:id", deleteTable);
 router.post("/:id/reserve", makeReservation);
 
+
 export default router;
