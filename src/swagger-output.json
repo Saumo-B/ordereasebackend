@@ -1,42 +1,12 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "Orderease API",
-    "description": "Restaurant POS API",
+    "title": "Restaurant POS API",
+    "description": "API documentation",
     "version": "1.0.0"
   },
   "host": "ordereasebackend-ten.vercel.app",
   "basePath": "/",
-  "tags": [
-    {
-      "name": "Orders",
-      "description": "Order management APIs"
-    },
-    {
-      "name": "Kitchen",
-      "description": "Kitchen operations APIs"
-    },
-    {
-      "name": "MyOrders",
-      "description": "User-specific order APIs"
-    },
-    {
-      "name": "OrderV2",
-      "description": "Second version of order APIs"
-    },
-    {
-      "name": "Menu",
-      "description": "Menu management APIs"
-    },
-    {
-      "name": "Table",
-      "description": "Restaurant table APIs"
-    },
-    {
-      "name": "Ingredients",
-      "description": "Ingredient management APIs"
-    }
-  ],
   "schemes": [
     "https"
   ],
@@ -51,7 +21,7 @@
         }
       }
     },
-    "/api/docs": {
+    "/docs": {
       "get": {
         "description": "",
         "responses": {
