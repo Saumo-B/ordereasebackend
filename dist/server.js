@@ -31,10 +31,14 @@ app.use("/api/table", table_1.default);
 app.use("/api/ingredients", ingredients_1.default);
 // serve swagger JSON
 app.get("/api/swagger.json", (req, res) => {
-    res.sendFile(path_1.default.join(__dirname, "../public/swagger-output.json"));
+    res.sendFile(path_1.default.join(__dirname, "../swagger-output.json"));
 });
-// serve Swagger UI
-app.use("/api/docs", express_1.default.static(path_1.default.join(__dirname, "../public/docs")));
+// Serve Swagger UI assets
+app.use("/api/docs-assets", express_1.default.static(path_1.default.join(__dirname, "docs-assets")));
+// Serve Swagger UI page
+app.get("/api/docs", (req, res) => {
+    res.sendFile(path_1.default.join(__dirname, "docs", "swagger-output.json"));
+});
 app.get("/", (req, res) => res.send("API Running"));
 mongoose_1.default.connect(process.env.MONGODB_URI).then(() => {
     console.log("Connected to database");

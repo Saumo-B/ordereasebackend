@@ -21,23 +21,21 @@ require("dotenv/config");
 const doc = {
     info: {
         title: "Orderease API",
-        description: "API documentation"
+        description: "Restaurant POS API"
     },
-    host: process.env.BACKEND_HOST || "localhost:3000",
+    host: process.env.BACKEND_HOST,
     schemes: ["https"],
     tags: [
         { name: "Orders", description: "Order management APIs" },
         { name: "Kitchen", description: "Kitchen operations APIs" },
-        { name: "My Orders", description: "User-specific order APIs" },
-        { name: "Order V2", description: "Second version of order APIs" },
+        { name: "MyOrders", description: "User-specific order APIs" },
+        { name: "OrderV2", description: "Second version of order APIs" },
         { name: "Menu", description: "Menu management APIs" },
         { name: "Table", description: "Restaurant table APIs" },
-        { name: "Ingredients", description: "Ingredient management APIs" },
-    ],
+        { name: "Ingredients", description: "Ingredient management APIs" }
+    ]
 };
-const outputFile = "./public/swagger-output.json"; // must be in public
+const outputFile = "./swagger-output.json";
 const endpointsFiles = ["./src/server.ts"];
-(0, swagger_autogen_1.default)()(outputFile, endpointsFiles, doc).then(() => {
-    console.log("Swagger JSON generated at public/swagger-output.json");
-});
+(0, swagger_autogen_1.default)()(outputFile, endpointsFiles, doc);
 //# sourceMappingURL=swagger-gen.js.map

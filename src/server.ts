@@ -31,11 +31,16 @@ app.use("/api/ingredients", ingredients);
 
 // serve swagger JSON
 app.get("/api/swagger.json", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/swagger-output.json"));
+  res.sendFile(path.join(__dirname, "../swagger-output.json"));
 });
 
-// serve Swagger UI
-app.use("/api/docs", express.static(path.join(__dirname, "../public/docs")));
+// Serve Swagger UI assets
+app.use("/api/docs-assets", express.static(path.join(__dirname, "docs-assets")));
+
+// Serve Swagger UI page
+app.get("/api/docs", (req, res) => {
+  res.sendFile(path.join(__dirname, "docs", "swagger-output.json"));
+});
 
 app.get("/", (req, res) => res.send("API Running"));
 
