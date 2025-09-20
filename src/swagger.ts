@@ -1,5 +1,3 @@
-
-
 import swaggerFile from "./swagger-output.json";
 
 const deployedUrl = process.env.BACKEND_ORIGIN;

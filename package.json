@@ -10,7 +10,7 @@
     "build-swagger": "ts-node src/swagger-gen.ts",
     "build-ts": "tsc",
     "copy-docs": "node copy-swagger-assets.js",
-    "build": "rimraf dist && tsc && node copy-swagger-assets.js",
+    "build": "rimraf dist && tsc && npm run build-swagger && node copy-swagger-assets.js",
     "ts.check": "tsc --project tsconfig.json",
     "add-build": "git add dist",
     "start": "nodemon src/server.js",

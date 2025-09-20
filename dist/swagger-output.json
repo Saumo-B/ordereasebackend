@@ -11,26 +11,6 @@
         "https"
     ],
     "paths": {
-        "/api/swagger.json": {
-            "get": {
-                "description": "",
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            }
-        },
-        "/docs": {
-            "get": {
-                "description": "",
-                "responses": {
-                    "200": {
-                        "description": "OK"
-                    }
-                }
-            }
-        },
         "/": {
             "get": {
                 "description": "",
