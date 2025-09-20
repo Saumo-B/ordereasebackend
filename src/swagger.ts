@@ -11,7 +11,7 @@ const swaggerSpec = {
     {
       url: deployedUrl,
       description: "Deployed API"
-    }
+    } 
   ]
 };
 

@@ -70,6 +70,7 @@ app.use("/api/orderv2", orderv2_1.default);
 app.use("/api/menu", menu_1.default);
 app.use("/api/table", table_1.default);
 app.use("/api/ingredients", ingredients_1.default);
+// Optional: local convenience route to redirect /docs -> static index (if not handled by vercel routes)
 app.get("/docs", (req, res) => {
     // If running in production, Vercel serves dist/docs/index.html directly (see vercel.json).
     // For local dev, just return a generated HTML that uses /docs-assets.
@@ -104,8 +105,9 @@ app.get("/docs", (req, res) => {
     `);
     }
 });
+// normal root
 app.get("/", (req, res) => res.send("Payment engine is Running"));
-// DB check
+// DB + start
 mongoose_1.default.connect(process.env.MONGODB_URI).then(() => {
     console.log("Connected to database!");
     app.listen(process.env.PORT, () => {
