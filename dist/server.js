@@ -35,7 +35,7 @@ app.use("/api/ingredients", ingredients_1.default);
 // Serve Swagger UI static files
 app.use("/docs-assets", express_1.default.static(path_1.default.join(__dirname, "docs-assets")));
 app.use("/api/docs", express_1.default.static(path_1.default.join(__dirname, "docs")));
-// Serve Swagger JSON directly if needed
+// Serve swagger JSON
 app.get("/api/swagger.json", (req, res) => {
     res.sendFile(path_1.default.join(__dirname, "swagger-output.json"));
 });

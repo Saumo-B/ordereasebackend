@@ -39,10 +39,11 @@ app.use("/api/ingredients", ingredients);
 app.use("/docs-assets", express.static(path.join(__dirname, "docs-assets")));
 app.use("/api/docs", express.static(path.join(__dirname, "docs")));
 
-// Serve Swagger JSON directly if needed
+// Serve swagger JSON
 app.get("/api/swagger.json", (req, res) => {
   res.sendFile(path.join(__dirname, "swagger-output.json"));
 });
+
 
 // Root
 app.get("/", (req, res) => res.send("Payment engine is running"));
