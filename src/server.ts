@@ -13,6 +13,8 @@ import menu from "./routes/menu";
 import ingredients from "./routes/ingredients";
 import table from "./routes/table";
 
+import aiRouter from "./routes/ai";
+
 const app = express();
 
 // Helmet and relaxed CSP
@@ -35,6 +37,7 @@ app.use("/api/menu", menu);
 app.use("/api/table", table);
 app.use("/api/ingredients", ingredients);
 
+app.use("/api/ai", aiRouter);
 // Serve Swagger UI static files
 app.use("/docs-assets", express.static(path.join(__dirname, "docs-assets")));
 app.use("/api/docs", express.static(path.join(__dirname, "docs")));
