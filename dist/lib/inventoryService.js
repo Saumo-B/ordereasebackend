@@ -75,7 +75,6 @@ function deductInventory(order_1) {
                 if (ingredient.quantity - qtyToDeduct < 0) {
                     throw new Error(`Not enough ${ingredient.name}. Available: ${ingredient.quantity}, Required: ${qtyToDeduct}`);
                 }
-                // ✅ Deduct both quantity and reservedQuantity
                 ingredient.quantity -= qtyToDeduct;
                 ingredient.reservedQuantity -= qtyToDeduct;
                 yield ingredient.save({ session });

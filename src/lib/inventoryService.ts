@@ -23,6 +23,7 @@ type MenuItemDoc = mongoose.Document & {
 };
 
 // ------------------ RESERVE INVENTORY ------------------
+
 export async function reserveInventory(order: OrderDoc, session: mongoose.ClientSession | null = null) {
   for (const li of order.lineItems) {
     const menuItem = await MenuItem.findById(li.menuItem)
@@ -92,7 +93,6 @@ export async function deductInventory(order: OrderDoc, session: mongoose.ClientS
         throw new Error(`Not enough ${ingredient.name}. Available: ${ingredient.quantity}, Required: ${qtyToDeduct}`);
       }
 
-      // ✅ Deduct both quantity and reservedQuantity
       ingredient.quantity -= qtyToDeduct;
       ingredient.reservedQuantity -= qtyToDeduct;
 
