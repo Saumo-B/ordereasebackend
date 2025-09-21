@@ -214,66 +214,42 @@ router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         const { id } = req.params;
         const { items = [], customer } = req.body;
         if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
-            yield session.abortTransaction();
-            session.endSession();
-            return res.status(400).json({ error: "Invalid MongoDB ObjectId for order" });
+            return res.status(400).json({ error: "Invalid order ID" });
         }
-        // Fetch the order with session
         const order = yield Order_1.Order.findById(id).session(session);
-        if (!order) {
-            yield session.abortTransaction();
-            session.endSession();
+        if (!order)
             return res.status(404).json({ error: "Order not found" });
-        }
-        if (order.status === "paid") {
-            yield session.abortTransaction();
-            session.endSession();
+        if (order.status === "paid")
             return res.status(400).json({ error: "Paid orders cannot be updated" });
-        }
-        // Validate new items
-        for (const it of items) {
-            if (!mongoose_1.default.Types.ObjectId.isValid(it.menuItem)) {
-                throw new Error(`Invalid menuItem ID: ${it.menuItem}`);
-            }
-            const menuDoc = yield Menu_1.MenuItem.findById(it.menuItem).session(session);
-            if (!menuDoc)
-                throw new Error(`MenuItem not found: ${it.menuItem}`);
-            if (!Number.isFinite(it.qty) || it.qty <= 0)
-                throw new Error(`Invalid qty for menuItem ${menuDoc.name}`);
-            if (!Number.isFinite(it.price) || it.price <= 0)
-                throw new Error(`Missing/invalid price for menuItem ${menuDoc.name}`);
-        }
-        // Release inventory for old items
-        yield (0, inventoryService_1.releaseInventory)(order.lineItems.map(it => ({ menuItem: it.menuItem, qty: it.qty })), session);
-        // Replace items with explicit type
+        // Release old inventory
+        yield (0, inventoryService_1.releaseInventory)(order.lineItems.map((it) => ({ menuItem: it.menuItem, qty: it.qty })));
+        // Validate & replace items
         order.lineItems = items.map((it) => ({
             menuItem: it.menuItem,
             qty: it.qty,
             price: it.price,
             served: it.served || false,
         }));
-        // Reserve inventory for new items
+        // Reserve new inventory
         yield (0, inventoryService_1.reserveInventory)(order, session);
         // Recalculate total
         order.amount = order.lineItems.reduce((sum, it) => sum + it.qty * it.price, 0);
         // Merge customer info
-        if (customer) {
+        if (customer)
             order.customer = Object.assign(Object.assign({}, order.customer), customer);
-        }
-        // Reset served flag if needed
+        // Reset served flag
         if (order.served)
             order.served = false;
-        // Save changes atomically
         yield order.save({ session });
         yield session.commitTransaction();
         session.endSession();
         return res.json({ message: "Order updated successfully", order });
     }
-    catch (err) {
+    catch (e) {
         yield session.abortTransaction();
         session.endSession();
-        console.error("Order update error:", err);
-        return res.status(400).json({ error: err instanceof Error ? err.message : "Failed to update order" });
+        console.error("Order update failed:", e);
+        return res.status(400).json({ error: e.message || "Order update failed" });
     }
 }));
 router.delete("/:orderId", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {

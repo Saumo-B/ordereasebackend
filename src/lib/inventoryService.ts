@@ -27,58 +27,58 @@ type LineItemInput = { menuItem: Types.ObjectId; qty: number };
 
 // ---- Deduct inventory after order is confirmed ----
 export async function deductInventory(order: OrderDoc, session: mongoose.ClientSession | null = null) {
-  for (const item of order.lineItems) {
-    const menuItem = await MenuItem.findById(item.menuItem)
+  for (const li of order.lineItems) {
+    const menuItem = await MenuItem.findById(li.menuItem)
       .populate("recipe.ingredient")
-      .session(session) as MenuItemDoc | null;
+      .session(session);
 
-    if (!menuItem) throw new Error(`Menu item ${item.menuItem} not found`);
+    if (!menuItem) throw new Error(`Menu item not found: ${li.menuItem}`);
 
     for (const r of menuItem.recipe) {
-      const ingredient = r.ingredient as IngredientDoc;
-      const qtyToDeduct = r.qtyRequired * item.qty;
+      const ingredient = r.ingredient as unknown as IngredientDoc;
+      const qtyToDeduct = r.qtyRequired * li.qty;
 
       ingredient.quantity -= qtyToDeduct;
       ingredient.reservedQuantity -= qtyToDeduct;
 
+      if (ingredient.quantity < 0) {
+        throw new Error(`Negative stock for ${ingredient.name} after deduction`);
+      }
+
       await ingredient.save({ session });
     }
-
-    // Update outOfStock based on any ingredient
-    menuItem.outOfStock = menuItem.recipe.some(r => {
-      const ing = r.ingredient as IngredientDoc;
-      return ing.quantity - ing.reservedQuantity < r.qtyRequired;
-    });
-
-    await menuItem.save({ session });
   }
 }
-
 // ---- Reserve inventory for pending order ----
 export async function reserveInventory(order: OrderDoc, session: mongoose.ClientSession | null = null) {
   for (const li of order.lineItems) {
     const menuItem = await MenuItem.findById(li.menuItem)
       .populate("recipe.ingredient")
-      .session(session) as MenuItemDoc | null;
+      .session(session);
 
     if (!menuItem) throw new Error(`Menu item not found: ${li.menuItem}`);
 
-    // Check availability
     for (const r of menuItem.recipe) {
-      const ingredient = r.ingredient as IngredientDoc;
-      const available = (ingredient.quantity || 0) - (ingredient.reservedQuantity || 0);
-      const required = r.qtyRequired * li.qty;
+      const ingredient = r.ingredient as unknown as IngredientDoc;
 
-      if (required > available) {
-        throw new Error(`Not enough ${ingredient.name}. Available: ${available}, Required: ${required}`);
+      if (!ingredient || typeof ingredient.quantity !== "number") {
+        throw new Error(`Ingredient not properly populated for menu item ${menuItem.name}`);
       }
 
-      // Reserve
-      ingredient.reservedQuantity += required;
+      const requiredQty = r.qtyRequired * li.qty;
+      const available = ingredient.quantity - ingredient.reservedQuantity;
+
+      if (requiredQty > available) {
+        throw new Error(`Not enough ${ingredient.name}. Available: ${available}, Required: ${requiredQty}`);
+      }
+
+      // Reserve stock
+      ingredient.reservedQuantity += requiredQty;
       await ingredient.save({ session });
     }
   }
 }
+
 
 // ---- Release reserved inventory for canceled/deleted order ----
 export async function releaseInventory(items: LineItemInput[], session: mongoose.ClientSession | null = null) {

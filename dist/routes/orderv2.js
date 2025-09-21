@@ -25,12 +25,10 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
     session.startTransaction();
     try {
         const { items = [], customer } = req.body || {};
-        if (!items.length) {
-            return res.status(400).json({ error: "Order must have at least one item" });
-        }
+        // Calculate total
         const amount = items.reduce((sum, it) => sum + it.price * it.qty, 0);
         const orderToken = yield (0, token_1.makeToken)();
-        // Build order (not saved yet)
+        // Build order object
         const newOrder = new Order_1.Order({
             status: "created",
             amount,
@@ -40,9 +38,9 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             orderToken,
             paymentMethod: "counter",
         });
-        // Reserve ingredients atomically
+        // Reserve inventory first
         yield (0, inventoryService_1.reserveInventory)(newOrder, session);
-        // Save the order only after reservation succeeds
+        // Save order after reservation succeeds
         const order = yield newOrder.save({ session });
         yield session.commitTransaction();
         session.endSession();
@@ -53,12 +51,11 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             token: order.orderToken,
         });
     }
-    catch (err) {
+    catch (e) {
         yield session.abortTransaction();
         session.endSession();
-        return res.status(400).json({
-            error: err instanceof Error ? err.message : "Failed to create order",
-        });
+        console.error("Order creation failed:", e);
+        return res.status(400).json({ error: e.message || "Order creation failed" });
     }
 }));
 exports.default = router;

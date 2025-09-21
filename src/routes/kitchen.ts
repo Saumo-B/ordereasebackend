@@ -57,60 +57,42 @@ router.patch("/status/:orderId", async (req, res, next) => {
     const { orderId } = req.params;
     const { status } = req.body;
 
-    if (!status) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ error: "Status is required in request body" });
-    }
-
+    if (!status) return res.status(400).json({ error: "Status is required" });
     const allowedStatuses = ["created", "paid", "done", "failed", "served"];
-    if (!allowedStatuses.includes(status)) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(400).json({ error: "Invalid status value" });
-    }
+    if (!allowedStatuses.includes(status)) return res.status(400).json({ error: "Invalid status" });
 
-    const order = await Order.findById(orderId).session(session) as OrderDoc | null;
-    if (!order) {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(404).json({ error: "Order not found" });
-    }
+    const order = await Order.findById(orderId).session(session);
+    if (!order) return res.status(404).json({ error: "Order not found" });
 
-    // Block duplicate paid updates
-    if (status === "paid" && order.status === "paid") {
-      await session.abortTransaction();
-      session.endSession();
-      return res.status(409).json({ message: "Order already Paid" });
-    }
-
-    // --- Paid status: deduct inventory safely
     if (status === "paid") {
-      order.status = "paid";
-      await deductInventory(order); // ingredient-level deduction
+      if (order.status === "paid") return res.status(409).json({ message: "Order already paid" });
 
-      // Mark done immediately if already served
+      // Deduct inventory
+      await deductInventory(order, session);
+
+      order.status = "paid";
       if (order.served) order.status = "done";
 
       await order.save({ session });
       await session.commitTransaction();
       session.endSession();
-      return res.json({ message: order.status === "done" ? "Order Completed" : "Order status updated to paid", order });
+
+      return res.json({ message: order.status === "done" ? "Order Completed" : "Order Paid", order });
     }
 
-    // --- Served status
     if (status === "served") {
       order.served = true;
-      order.lineItems.forEach(li => li.served = true);
+      order.lineItems.forEach((li) => (li.served = true));
       if (order.status === "paid") order.status = "done";
+
       await order.save({ session });
       await session.commitTransaction();
       session.endSession();
 
-      return res.json({ message: order.status === "done" ? "Order Completed" : "Order is Served", order });
+      return res.json({ message: order.status === "done" ? "Order Completed" : "Order Served", order });
     }
 
-    // --- Other statuses
+    // Other statuses
     order.status = status;
     await order.save({ session });
     await session.commitTransaction();
@@ -120,8 +102,8 @@ router.patch("/status/:orderId", async (req, res, next) => {
   } catch (err: any) {
     await session.abortTransaction();
     session.endSession();
-    console.error("Order status update error:", err);
-    return res.status(400).json({ error: err instanceof Error ? err.message : "Failed to update status" });
+    console.error("Order status update failed:", err);
+    next(err);
   }
 });
 
