@@ -11,10 +11,13 @@ const router = Router();
 router.post("/", async (req, res, next) => {
   try {
     const { items = [], customer } = req.body || {};
+
+    // 🔹 Calculate total
     const amount = items.reduce((sum: number, it: any) => sum + it.price * it.qty, 0);
     const orderToken = await makeToken();
 
-    const order = await Order.create({
+    // 🔹 Build order object (not saving yet)
+    const newOrder = new Order({
       status: "created",
       amount,
       currency: "INR",
@@ -23,12 +26,16 @@ router.post("/", async (req, res, next) => {
       orderToken,
       paymentMethod: "counter",
     }) as OrderDoc;
-    try {
-        await reserveInventory(order); // checks availability & increments reservedQuantity
-      } catch (err) {
-        return res.status(400).json({ error: err instanceof Error ? err.message : "Not enough stock" });
-      }
 
+    // 🔹 First check & reserve inventory
+    try {
+      await reserveInventory(newOrder); // will throw if insufficient
+    } catch (err) {
+      return res.status(400).json({ error: err instanceof Error ? err.message : "Not enough stock" });
+    }
+
+    // 🔹 Save order only if stock was reserved
+    const order = await newOrder.save();
 
     return res.json({
       id: order.id,

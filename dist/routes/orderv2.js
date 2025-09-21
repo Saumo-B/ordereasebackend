@@ -20,9 +20,11 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
     var _a;
     try {
         const { items = [], customer } = req.body || {};
+        // 🔹 Calculate total
         const amount = items.reduce((sum, it) => sum + it.price * it.qty, 0);
         const orderToken = yield (0, token_1.makeToken)();
-        const order = yield Order_1.Order.create({
+        // 🔹 Build order object (not saving yet)
+        const newOrder = new Order_1.Order({
             status: "created",
             amount,
             currency: "INR",
@@ -31,12 +33,15 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             orderToken,
             paymentMethod: "counter",
         });
+        // 🔹 First check & reserve inventory
         try {
-            yield (0, inventoryService_1.reserveInventory)(order); // checks availability & increments reservedQuantity
+            yield (0, inventoryService_1.reserveInventory)(newOrder); // will throw if insufficient
         }
         catch (err) {
             return res.status(400).json({ error: err instanceof Error ? err.message : "Not enough stock" });
         }
+        // 🔹 Save order only if stock was reserved
+        const order = yield newOrder.save();
         return res.json({
             id: order.id,
             amount: order.amount,

@@ -280,7 +280,7 @@ router.get("/sales-report", async (req, res, next) => {
     const refundedOrders = orders.filter(o => o.status === "failed");
 
     const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
-    const totalOrders = paidOrders.length;
+    const totalOrders = paidOrders.length;  
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     const totalRefunds = refundedOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
