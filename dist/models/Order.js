@@ -23,6 +23,12 @@ const OrderSchema = new mongoose_1.default.Schema({
         phone: String
     },
     orderToken: { type: String },
+    paymentMethod: {
+        type: String,
+        enum: ["paymentgateway", "counter"],
+        required: true,
+        immutable: true
+    },
 }, { timestamps: true });
 exports.Order = mongoose_1.default.model("Order", OrderSchema);
 //# sourceMappingURL=Order.js.map

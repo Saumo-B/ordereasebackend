@@ -66,6 +66,7 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             lineItems: items,
             customer,
             orderToken,
+            paymentMethod: "paymentgateway",
         });
         try {
             yield (0, inventoryService_1.reserveInventory)(order); // checks availability & increments reservedQuantity

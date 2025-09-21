@@ -53,7 +53,14 @@ const OrderSchema = new mongoose.Schema({
     phone: String
   },
   orderToken: { type: String },
+  paymentMethod: { 
+  type: String, 
+  enum: ["paymentgateway", "counter"], 
+  required: true,
+  immutable: true 
+},
 }, { timestamps: true });
+
 
 export type OrderDoc = mongoose.InferSchemaType<typeof OrderSchema> & mongoose.Document;
 export const Order = mongoose.model("Order", OrderSchema);

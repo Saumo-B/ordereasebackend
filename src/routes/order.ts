@@ -73,6 +73,7 @@ router.post("/", async (req, res, next) => {
       lineItems: items,
       customer,
       orderToken,
+      paymentMethod: "paymentgateway",
     }) ;
        try {
             await reserveInventory(order); // checks availability & increments reservedQuantity
