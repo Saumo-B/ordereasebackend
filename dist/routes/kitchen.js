@@ -20,7 +20,7 @@ const Ingredients_1 = require("../models/Ingredients");
 const dayjs_1 = __importDefault(require("dayjs"));
 const utc_1 = __importDefault(require("dayjs/plugin/utc"));
 const timezone_1 = __importDefault(require("dayjs/plugin/timezone"));
-// import mongoose, { Types } from "mongoose";
+const mongoose_1 = __importDefault(require("mongoose"));
 dayjs_1.default.extend(utc_1.default);
 dayjs_1.default.extend(timezone_1.default);
 const router = (0, express_1.Router)();
@@ -57,70 +57,69 @@ router.get("/today", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
 }));
 // PATCH /api/kitchen/status/:orderId
 router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const session = yield mongoose_1.default.startSession();
+    session.startTransaction();
     try {
         const { orderId } = req.params;
         const { status } = req.body;
         if (!status) {
+            yield session.abortTransaction();
+            session.endSession();
             return res.status(400).json({ error: "Status is required in request body" });
         }
         const allowedStatuses = ["created", "paid", "done", "failed", "served"];
         if (!allowedStatuses.includes(status)) {
+            yield session.abortTransaction();
+            session.endSession();
             return res.status(400).json({ error: "Invalid status value" });
         }
-        // --- Handle "paid" with atomic update
-        if (status === "paid") {
-            // Atomically set status to 'paid' only if not already paid
-            const order = yield Order_1.Order.findOneAndUpdate({ _id: orderId, status: { $ne: "paid" } }, { $set: { status: "paid" } }, { new: true } // return updated document
-            );
-            if (!order) {
-                return res.status(409).json({ message: "Order already Paid" });
-            }
-            // Deduct inventory safely
-            try {
-                yield (0, inventoryService_1.deductInventory)(order);
-            }
-            catch (err) {
-                // Optionally revert order status if deduction fails
-                yield Order_1.Order.findByIdAndUpdate(order._id, { status: "created" });
-                return res.status(400).json({ error: err instanceof Error ? err.message : "Inventory error" });
-            }
-            // If already served, mark as done
-            if (order.served) {
-                order.status = "done";
-                yield order.save();
-                return res.json({ message: "Order Completed", order });
-            }
-            return res.json({ message: "Order status updated to paid", order });
+        const order = yield Order_1.Order.findById(orderId).session(session);
+        if (!order) {
+            yield session.abortTransaction();
+            session.endSession();
+            return res.status(404).json({ error: "Order not found" });
         }
-        // --- Handle "served" (atomic as well)
-        if (status === "served") {
-            const order = yield Order_1.Order.findById(orderId);
-            if (!order)
-                return res.status(404).json({ error: "Order not found" });
-            // mark order as served
-            order.served = true;
-            // mark all line items as served
-            order.lineItems.forEach(item => {
-                item.served = true;
-            });
-            // if already paid, close the order
-            if (order.status === "paid") {
+        // Block duplicate paid updates
+        if (status === "paid" && order.status === "paid") {
+            yield session.abortTransaction();
+            session.endSession();
+            return res.status(409).json({ message: "Order already Paid" });
+        }
+        // --- Paid status: deduct inventory safely
+        if (status === "paid") {
+            order.status = "paid";
+            yield (0, inventoryService_1.deductInventory)(order); // ingredient-level deduction
+            // Mark done immediately if already served
+            if (order.served)
                 order.status = "done";
-            }
-            yield order.save();
-            return res.json({
-                message: order.status === "done" ? "Order Completed" : "Order is Served",
-                order,
-            });
+            yield order.save({ session });
+            yield session.commitTransaction();
+            session.endSession();
+            return res.json({ message: order.status === "done" ? "Order Completed" : "Order status updated to paid", order });
+        }
+        // --- Served status
+        if (status === "served") {
+            order.served = true;
+            order.lineItems.forEach(li => li.served = true);
+            if (order.status === "paid")
+                order.status = "done";
+            yield order.save({ session });
+            yield session.commitTransaction();
+            session.endSession();
+            return res.json({ message: order.status === "done" ? "Order Completed" : "Order is Served", order });
         }
         // --- Other statuses
-        const order = yield Order_1.Order.findByIdAndUpdate(orderId, { status }, { new: true });
-        if (!order)
-            return res.status(404).json({ error: "Order not found" });
+        order.status = status;
+        yield order.save({ session });
+        yield session.commitTransaction();
+        session.endSession();
         return res.json({ message: `Order status updated to ${status}`, order });
     }
     catch (err) {
-        next(err);
+        yield session.abortTransaction();
+        session.endSession();
+        console.error("Order status update error:", err);
+        return res.status(400).json({ error: err instanceof Error ? err.message : "Failed to update status" });
     }
 }));
 // 📊 GET /api/kitchen/dashboard-stats (IST-based)

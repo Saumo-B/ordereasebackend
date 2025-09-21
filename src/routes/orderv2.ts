@@ -9,14 +9,20 @@ const router = Router();
 
 // Create order
 router.post("/", async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { items = [], customer } = req.body || {};
 
-    // 🔹 Calculate total
+    if (!items.length) {
+      return res.status(400).json({ error: "Order must have at least one item" });
+    }
+
     const amount = items.reduce((sum: number, it: any) => sum + it.price * it.qty, 0);
     const orderToken = await makeToken();
 
-    // 🔹 Build order object (not saving yet)
+    // Build order (not saved yet)
     const newOrder = new Order({
       status: "created",
       amount,
@@ -27,15 +33,14 @@ router.post("/", async (req, res, next) => {
       paymentMethod: "counter",
     }) as OrderDoc;
 
-    // 🔹 First check & reserve inventory
-    try {
-      await reserveInventory(newOrder); // will throw if insufficient
-    } catch (err) {
-      return res.status(400).json({ error: err instanceof Error ? err.message : "Not enough stock" });
-    }
+    // Reserve ingredients atomically
+    await reserveInventory(newOrder, session);
 
-    // 🔹 Save order only if stock was reserved
-    const order = await newOrder.save();
+    // Save the order only after reservation succeeds
+    const order = await newOrder.save({ session });
+
+    await session.commitTransaction();
+    session.endSession();
 
     return res.json({
       id: order.id,
@@ -43,9 +48,12 @@ router.post("/", async (req, res, next) => {
       currency: order.currency,
       token: order.orderToken,
     });
-  } catch (e: any) {
-    console.error("Order creation failed:", e);
-    return res.status(400).json({ error: e.response?.data || e.message });
+  } catch (err: any) {
+    await session.abortTransaction();
+    session.endSession();
+    return res.status(400).json({
+      error: err instanceof Error ? err.message : "Failed to create order",
+    });
   }
 });
 

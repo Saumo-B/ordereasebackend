@@ -12,7 +12,6 @@ const MenuItemSchema = new mongoose_1.default.Schema({
     category: { type: String },
     description: { type: String },
     imageUrl: { type: String },
-    reservedQuantity: { type: Number, default: 0 },
     // recipe: list of ingredient + required qty
     recipe: [{
             ingredient: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "Ingredient", required: true },

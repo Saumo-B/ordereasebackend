@@ -7,7 +7,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 
-// import mongoose, { Types } from "mongoose";
+import mongoose, { Types } from "mongoose";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -50,86 +50,80 @@ router.get("/today", async (req, res, next) => {
 
 // PATCH /api/kitchen/status/:orderId
 router.patch("/status/:orderId", async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const { orderId } = req.params;
     const { status } = req.body;
 
     if (!status) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ error: "Status is required in request body" });
     }
 
     const allowedStatuses = ["created", "paid", "done", "failed", "served"];
     if (!allowedStatuses.includes(status)) {
+      await session.abortTransaction();
+      session.endSession();
       return res.status(400).json({ error: "Invalid status value" });
     }
 
-    // --- Handle "paid" with atomic update
-    if (status === "paid") {
-      // Atomically set status to 'paid' only if not already paid
-      const order = await Order.findOneAndUpdate<OrderDoc>(
-        { _id: orderId, status: { $ne: "paid" } },
-        { $set: { status: "paid" } },
-        { new: true } // return updated document
-      );
-
-      if (!order) {
-        return res.status(409).json({ message: "Order already Paid" });
-      }
-
-      // Deduct inventory safely
-      try {
-        await deductInventory(order);
-      } catch (err) {
-        // Optionally revert order status if deduction fails
-        await Order.findByIdAndUpdate(order._id, { status: "created" });
-        return res.status(400).json({ error: err instanceof Error ? err.message : "Inventory error" });
-      }
-
-      // If already served, mark as done
-      if (order.served) {
-        order.status = "done";
-        await order.save();
-        return res.json({ message: "Order Completed", order });
-      }
-
-      return res.json({ message: "Order status updated to paid", order });
+    const order = await Order.findById(orderId).session(session) as OrderDoc | null;
+    if (!order) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ error: "Order not found" });
     }
-    // --- Handle "served" (atomic as well)
+
+    // Block duplicate paid updates
+    if (status === "paid" && order.status === "paid") {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(409).json({ message: "Order already Paid" });
+    }
+
+    // --- Paid status: deduct inventory safely
+    if (status === "paid") {
+      order.status = "paid";
+      await deductInventory(order); // ingredient-level deduction
+
+      // Mark done immediately if already served
+      if (order.served) order.status = "done";
+
+      await order.save({ session });
+      await session.commitTransaction();
+      session.endSession();
+      return res.json({ message: order.status === "done" ? "Order Completed" : "Order status updated to paid", order });
+    }
+
+    // --- Served status
     if (status === "served") {
-      const order = await Order.findById(orderId);
-      if (!order) return res.status(404).json({ error: "Order not found" });
-
-      // mark order as served
       order.served = true;
+      order.lineItems.forEach(li => li.served = true);
+      if (order.status === "paid") order.status = "done";
+      await order.save({ session });
+      await session.commitTransaction();
+      session.endSession();
 
-      // mark all line items as served
-      order.lineItems.forEach(item => {
-        item.served = true;
-      });
-
-      // if already paid, close the order
-      if (order.status === "paid") {
-        order.status = "done";
-      }
-
-      await order.save();
-
-      return res.json({
-        message: order.status === "done" ? "Order Completed" : "Order is Served",
-        order,
-      });
+      return res.json({ message: order.status === "done" ? "Order Completed" : "Order is Served", order });
     }
 
     // --- Other statuses
-    const order = await Order.findByIdAndUpdate(orderId, { status }, { new: true });
-    if (!order) return res.status(404).json({ error: "Order not found" });
+    order.status = status;
+    await order.save({ session });
+    await session.commitTransaction();
+    session.endSession();
 
     return res.json({ message: `Order status updated to ${status}`, order });
-  } catch (err) {
-    next(err);
+  } catch (err: any) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Order status update error:", err);
+    return res.status(400).json({ error: err instanceof Error ? err.message : "Failed to update status" });
   }
 });
-
 
 // 📊 GET /api/kitchen/dashboard-stats (IST-based)
 router.get("/dashboard-stats", async (req, res, next) => {

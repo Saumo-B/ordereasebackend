@@ -208,57 +208,52 @@ router.get("/detail", (req, res, next) => __awaiter(void 0, void 0, void 0, func
 // PATCH /api/orders/:id
 // PATCH /orders/:id
 router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const session = yield mongoose_1.default.startSession();
+    session.startTransaction();
     try {
         const { id } = req.params;
         const { items = [], customer } = req.body;
         if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
+            yield session.abortTransaction();
+            session.endSession();
             return res.status(400).json({ error: "Invalid MongoDB ObjectId for order" });
         }
-        // Fetch the order
-        const order = yield Order_1.Order.findById(id);
-        if (!order)
+        // Fetch the order with session
+        const order = yield Order_1.Order.findById(id).session(session);
+        if (!order) {
+            yield session.abortTransaction();
+            session.endSession();
             return res.status(404).json({ error: "Order not found" });
-        // Block updates if already paid
+        }
         if (order.status === "paid") {
+            yield session.abortTransaction();
+            session.endSession();
             return res.status(400).json({ error: "Paid orders cannot be updated" });
         }
         // Validate new items
-        for (const { menuItem, qty, price } of items) {
-            if (!mongoose_1.default.Types.ObjectId.isValid(menuItem)) {
-                return res.status(400).json({ error: `Invalid menuItem ID: ${menuItem}` });
+        for (const it of items) {
+            if (!mongoose_1.default.Types.ObjectId.isValid(it.menuItem)) {
+                throw new Error(`Invalid menuItem ID: ${it.menuItem}`);
             }
-            const menuDoc = yield Menu_1.MenuItem.findById(menuItem);
-            if (!menuDoc) {
-                return res.status(400).json({ error: `MenuItem not found: ${menuItem}` });
-            }
-            if (!Number.isFinite(qty) || qty <= 0) {
-                return res.status(400).json({ error: `Invalid qty for menuItem ${menuDoc.name}` });
-            }
-            if (!Number.isFinite(price) || price <= 0) {
-                return res.status(400).json({ error: `Missing/invalid price for menuItem ${menuDoc.name}` });
-            }
+            const menuDoc = yield Menu_1.MenuItem.findById(it.menuItem).session(session);
+            if (!menuDoc)
+                throw new Error(`MenuItem not found: ${it.menuItem}`);
+            if (!Number.isFinite(it.qty) || it.qty <= 0)
+                throw new Error(`Invalid qty for menuItem ${menuDoc.name}`);
+            if (!Number.isFinite(it.price) || it.price <= 0)
+                throw new Error(`Missing/invalid price for menuItem ${menuDoc.name}`);
         }
         // Release inventory for old items
-        yield (0, inventoryService_1.releaseInventory)(order.lineItems.map((it) => ({
-            menuItem: it.menuItem,
-            qty: it.qty,
-        })));
-        // Replace items
+        yield (0, inventoryService_1.releaseInventory)(order.lineItems.map(it => ({ menuItem: it.menuItem, qty: it.qty })), session);
+        // Replace items with explicit type
         order.lineItems = items.map((it) => ({
             menuItem: it.menuItem,
             qty: it.qty,
             price: it.price,
-            served: it.served,
-        })); // Properly cast to DocumentArray type
+            served: it.served || false,
+        }));
         // Reserve inventory for new items
-        try {
-            yield (0, inventoryService_1.reserveInventory)(order);
-        }
-        catch (err) {
-            return res
-                .status(400)
-                .json({ error: err instanceof Error ? err.message : "Not enough stock" });
-        }
+        yield (0, inventoryService_1.reserveInventory)(order, session);
         // Recalculate total
         order.amount = order.lineItems.reduce((sum, it) => sum + it.qty * it.price, 0);
         // Merge customer info
@@ -268,33 +263,52 @@ router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         // Reset served flag if needed
         if (order.served)
             order.served = false;
-        // Save changes
-        yield order.save();
+        // Save changes atomically
+        yield order.save({ session });
+        yield session.commitTransaction();
+        session.endSession();
         return res.json({ message: "Order updated successfully", order });
     }
-    catch (e) {
-        console.error("Order update error:", e);
-        next(e);
+    catch (err) {
+        yield session.abortTransaction();
+        session.endSession();
+        console.error("Order update error:", err);
+        return res.status(400).json({ error: err instanceof Error ? err.message : "Failed to update order" });
     }
 }));
 router.delete("/:orderId", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    const session = yield mongoose_1.default.startSession();
+    session.startTransaction();
     try {
         const { orderId } = req.params;
         if (!mongoose_1.default.Types.ObjectId.isValid(orderId)) {
             return res.status(400).json({ error: "Invalid MongoDB ObjectId" });
         }
-        const deletedOrder = yield Order_1.Order.findByIdAndDelete(orderId);
-        if (!deletedOrder) {
+        // Fetch the order
+        const order = yield Order_1.Order.findById(orderId).session(session);
+        if (!order) {
+            yield session.abortTransaction();
+            session.endSession();
             return res.status(404).json({ error: "Order not found" });
         }
+        // Release reserved inventory for this order
+        yield (0, inventoryService_1.releaseInventory)(order.lineItems.map(li => ({
+            menuItem: li.menuItem,
+            qty: li.qty
+        })), session);
+        // Delete the order
+        yield order.deleteOne({ session });
+        yield session.commitTransaction();
+        session.endSession();
         return res.json({
             message: "Order deleted successfully",
-            // order: deletedOrder,
         });
     }
-    catch (e) {
-        console.error("Order delete error:", e);
-        next(e);
+    catch (err) {
+        yield session.abortTransaction();
+        session.endSession();
+        console.error("Order delete error:", err);
+        return res.status(400).json({ error: err instanceof Error ? err.message : "Failed to delete order" });
     }
 }));
 exports.default = router;

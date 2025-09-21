@@ -8,78 +8,81 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deductInventory = deductInventory;
 exports.reserveInventory = reserveInventory;
 exports.releaseInventory = releaseInventory;
-const mongoose_1 = __importDefault(require("mongoose"));
-// Deduct inventory function
-function deductInventory(order) {
-    return __awaiter(this, void 0, void 0, function* () {
+const Menu_1 = require("../models/Menu");
+// ---- Deduct inventory after order is confirmed ----
+function deductInventory(order_1) {
+    return __awaiter(this, arguments, void 0, function* (order, session = null) {
         for (const item of order.lineItems) {
-            const menuItem = yield mongoose_1.default.model("MenuItem").findById(item.menuItem)
-                .populate("recipe.ingredient");
-            if (!menuItem)
-                throw new Error(`Menu item ${item.menuItem} not found`);
-            for (const ing of menuItem.recipe) {
-                const ingredient = ing.ingredient;
-                const qtyToDeduct = ing.qtyRequired * item.qty;
-                ingredient.quantity -= qtyToDeduct;
-                ingredient.reservedQuantity -= qtyToDeduct;
-                yield ingredient.save();
-                menuItem.outOfStock = ingredient.quantity - ingredient.reservedQuantity <= 0;
-                yield menuItem.save();
-            }
-        }
-    });
-}
-function reserveInventory(order) {
-    return __awaiter(this, void 0, void 0, function* () {
-        for (const item of order.lineItems) {
-            const menuItem = yield mongoose_1.default.model("MenuItem")
-                .findById(item.menuItem)
-                .populate("recipe.ingredient");
+            const menuItem = yield Menu_1.MenuItem.findById(item.menuItem)
+                .populate("recipe.ingredient")
+                .session(session);
             if (!menuItem)
                 throw new Error(`Menu item ${item.menuItem} not found`);
             for (const r of menuItem.recipe) {
                 const ingredient = r.ingredient;
-                const requiredQty = r.qtyRequired * item.qty;
-                if (ingredient.quantity - ingredient.reservedQuantity < requiredQty) {
-                    throw new Error(`Ingredient ${ingredient.name} is not enough`);
+                const qtyToDeduct = r.qtyRequired * item.qty;
+                ingredient.quantity -= qtyToDeduct;
+                ingredient.reservedQuantity -= qtyToDeduct;
+                yield ingredient.save({ session });
+            }
+            // Update outOfStock based on any ingredient
+            menuItem.outOfStock = menuItem.recipe.some(r => {
+                const ing = r.ingredient;
+                return ing.quantity - ing.reservedQuantity < r.qtyRequired;
+            });
+            yield menuItem.save({ session });
+        }
+    });
+}
+// ---- Reserve inventory for pending order ----
+function reserveInventory(order_1) {
+    return __awaiter(this, arguments, void 0, function* (order, session = null) {
+        for (const li of order.lineItems) {
+            const menuItem = yield Menu_1.MenuItem.findById(li.menuItem)
+                .populate("recipe.ingredient")
+                .session(session);
+            if (!menuItem)
+                throw new Error(`Menu item not found: ${li.menuItem}`);
+            // Check availability
+            for (const r of menuItem.recipe) {
+                const ingredient = r.ingredient;
+                const available = (ingredient.quantity || 0) - (ingredient.reservedQuantity || 0);
+                const required = r.qtyRequired * li.qty;
+                if (required > available) {
+                    throw new Error(`Not enough ${ingredient.name}. Available: ${available}, Required: ${required}`);
                 }
-                ingredient.reservedQuantity += requiredQty;
-                yield ingredient.save();
-                if (ingredient.quantity - ingredient.reservedQuantity <= 0) {
-                    menuItem.outOfStock = true;
-                    yield menuItem.save();
-                }
+                // Reserve
+                ingredient.reservedQuantity += required;
+                yield ingredient.save({ session });
             }
         }
     });
 }
-// Release based on items
-function releaseInventory(items) {
-    return __awaiter(this, void 0, void 0, function* () {
+// ---- Release reserved inventory for canceled/deleted order ----
+function releaseInventory(items_1) {
+    return __awaiter(this, arguments, void 0, function* (items, session = null) {
         for (const it of items) {
-            const menuItem = yield mongoose_1.default.model("MenuItem")
-                .findById(it.menuItem)
-                .populate("recipe.ingredient");
+            const menuItem = yield Menu_1.MenuItem.findById(it.menuItem)
+                .populate("recipe.ingredient")
+                .session(session);
             if (!menuItem)
                 throw new Error("Menu item not found");
             for (const r of menuItem.recipe) {
                 const ingredient = r.ingredient;
                 const qtyToRelease = r.qtyRequired * it.qty;
                 ingredient.reservedQuantity = Math.max(0, ingredient.reservedQuantity - qtyToRelease);
-                yield ingredient.save();
+                yield ingredient.save({ session });
             }
-            menuItem.outOfStock = menuItem.recipe.some((r) => {
-                const ingredient = r.ingredient;
-                return ingredient.quantity - ingredient.reservedQuantity < r.qtyRequired;
+            // Update outOfStock status
+            menuItem.outOfStock = menuItem.recipe.some(r => {
+                const ing = r.ingredient;
+                return ing.quantity - ing.reservedQuantity < r.qtyRequired;
             });
-            yield menuItem.save();
+            yield menuItem.save({ session });
         }
     });
 }

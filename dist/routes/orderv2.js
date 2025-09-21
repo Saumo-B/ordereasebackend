@@ -8,22 +8,29 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 require("dotenv/config");
 const Order_1 = require("../models/Order");
 const token_1 = require("../lib/token");
 const inventoryService_1 = require("../lib/inventoryService");
+const mongoose_1 = __importDefault(require("mongoose"));
 const router = (0, express_1.Router)();
 // Create order
 router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    const session = yield mongoose_1.default.startSession();
+    session.startTransaction();
     try {
         const { items = [], customer } = req.body || {};
-        // 🔹 Calculate total
+        if (!items.length) {
+            return res.status(400).json({ error: "Order must have at least one item" });
+        }
         const amount = items.reduce((sum, it) => sum + it.price * it.qty, 0);
         const orderToken = yield (0, token_1.makeToken)();
-        // 🔹 Build order object (not saving yet)
+        // Build order (not saved yet)
         const newOrder = new Order_1.Order({
             status: "created",
             amount,
@@ -33,15 +40,12 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             orderToken,
             paymentMethod: "counter",
         });
-        // 🔹 First check & reserve inventory
-        try {
-            yield (0, inventoryService_1.reserveInventory)(newOrder); // will throw if insufficient
-        }
-        catch (err) {
-            return res.status(400).json({ error: err instanceof Error ? err.message : "Not enough stock" });
-        }
-        // 🔹 Save order only if stock was reserved
-        const order = yield newOrder.save();
+        // Reserve ingredients atomically
+        yield (0, inventoryService_1.reserveInventory)(newOrder, session);
+        // Save the order only after reservation succeeds
+        const order = yield newOrder.save({ session });
+        yield session.commitTransaction();
+        session.endSession();
         return res.json({
             id: order.id,
             amount: order.amount,
@@ -49,9 +53,12 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             token: order.orderToken,
         });
     }
-    catch (e) {
-        console.error("Order creation failed:", e);
-        return res.status(400).json({ error: ((_a = e.response) === null || _a === void 0 ? void 0 : _a.data) || e.message });
+    catch (err) {
+        yield session.abortTransaction();
+        session.endSession();
+        return res.status(400).json({
+            error: err instanceof Error ? err.message : "Failed to create order",
+        });
     }
 }));
 exports.default = router;
