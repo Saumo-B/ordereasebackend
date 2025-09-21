@@ -88,10 +88,10 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
         }
         // Validate each menu item
         for (const item of menuItems) {
-            if (!item.name || !item.sku || !item.price) {
+            if (!item.name || !item.price) {
                 return res
                     .status(400)
-                    .json({ error: "Each item must have name, sku, and price" });
+                    .json({ error: "Each item must have name and price" });
             }
         }
         // Insert many at once
@@ -103,7 +103,7 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
     }
     catch (e) {
         if (e.code === 11000) {
-            return res.status(400).json({ error: "Duplicate SKU or name detected" });
+            return res.status(400).json({ error: "Duplicate name detected" });
         }
         next(e);
     }

@@ -1,10 +1,12 @@
 import { Router } from "express";
 import "dotenv/config";
 import { deductInventory } from "../lib/inventoryService";
-import { Order } from "../models/Order";
+import { Order,OrderDoc } from "../models/Order";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
+
+import mongoose, { Types } from "mongoose";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -62,23 +64,27 @@ router.patch("/status/:orderId", async (req, res, next) => {
 
     // --- Handle "paid" with atomic update
     if (status === "paid") {
-      const order = await Order.findOneAndUpdate(
-        { _id: orderId, status: { $ne: "paid" } }, // only update if NOT already paid
+      // Atomically set status to 'paid' only if not already paid
+      const order = await Order.findOneAndUpdate<OrderDoc>(
+        { _id: orderId, status: { $ne: "paid" } },
         { $set: { status: "paid" } },
-        { new: true }
+        { new: true } // return updated document
       );
 
       if (!order) {
         return res.status(409).json({ message: "Order already Paid" });
       }
 
+      // Deduct inventory safely
       try {
-        await deductInventory(orderId);
+        await deductInventory(order);
       } catch (err) {
+        // Optionally revert order status if deduction fails
+        await Order.findByIdAndUpdate(order._id, { status: "created" });
         return res.status(400).json({ error: err instanceof Error ? err.message : "Inventory error" });
       }
 
-      // If already served, mark done
+      // If already served, mark as done
       if (order.served) {
         order.status = "done";
         await order.save();
@@ -87,7 +93,6 @@ router.patch("/status/:orderId", async (req, res, next) => {
 
       return res.json({ message: "Order status updated to paid", order });
     }
-
     // --- Handle "served" (atomic as well)
     if (status === "served") {
       const order = await Order.findById(orderId);

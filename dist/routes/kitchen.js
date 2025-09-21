@@ -67,18 +67,22 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
         }
         // --- Handle "paid" with atomic update
         if (status === "paid") {
-            const order = yield Order_1.Order.findOneAndUpdate({ _id: orderId, status: { $ne: "paid" } }, // only update if NOT already paid
-            { $set: { status: "paid" } }, { new: true });
+            // Atomically set status to 'paid' only if not already paid
+            const order = yield Order_1.Order.findOneAndUpdate({ _id: orderId, status: { $ne: "paid" } }, { $set: { status: "paid" } }, { new: true } // return updated document
+            );
             if (!order) {
                 return res.status(409).json({ message: "Order already Paid" });
             }
+            // Deduct inventory safely
             try {
-                yield (0, inventoryService_1.deductInventory)(orderId);
+                yield (0, inventoryService_1.deductInventory)(order);
             }
             catch (err) {
+                // Optionally revert order status if deduction fails
+                yield Order_1.Order.findByIdAndUpdate(order._id, { status: "created" });
                 return res.status(400).json({ error: err instanceof Error ? err.message : "Inventory error" });
             }
-            // If already served, mark done
+            // If already served, mark as done
             if (order.served) {
                 order.status = "done";
                 yield order.save();

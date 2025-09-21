@@ -2,8 +2,9 @@ import mongoose from "mongoose";
 
 const IngredientSchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true },
-  unit: { type: String, required: true }, // e.g., "kg", "g", "litre", "pcs"
-  quantity: { type: Number, required: true, default: 0 }, // current stock
+  unit: { type: String, required: true }, 
+  quantity: { type: Number, required: true, default: 0 }, // actual stock
+  reservedQuantity: { type: Number, default: 0 }, // reserved for unpaid orders
 }, { timestamps: true });
 
 export const Ingredient = mongoose.model("Ingredient", IngredientSchema);

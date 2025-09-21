@@ -1,4 +1,37 @@
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
+
+// --- LineItem interface ---
+export interface ILineItem {
+  menuItem: Types.ObjectId;   // reference to MenuItem
+  served: boolean;
+  qty: number;
+  price: number;
+}
+
+// --- Customer info interface ---
+export interface ICustomer {
+  name?: string;
+  phone?: string;
+}
+
+// --- Order interface ---
+export interface IOrder {
+  phonepeOrderId?: string;
+  status: "created" | "paid" | "done" | "failed";
+  amount: number;
+  currency?: string;
+  served: boolean;
+  lineItems: ILineItem[];
+  customer?: ICustomer;
+  orderToken?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// Optional: For Mongoose document type
+export interface IOrderDoc extends IOrder, mongoose.Document {
+  _id: string;
+}
 
 const LineItem = new mongoose.Schema({
   menuItem: { type: mongoose.Schema.Types.ObjectId, ref: "MenuItem", required: true },
@@ -22,5 +55,5 @@ const OrderSchema = new mongoose.Schema({
   orderToken: { type: String },
 }, { timestamps: true });
 
-export type OrderDoc = mongoose.InferSchemaType<typeof OrderSchema> & {_id: string};
+export type OrderDoc = mongoose.InferSchemaType<typeof OrderSchema> & mongoose.Document;
 export const Order = mongoose.model("Order", OrderSchema);

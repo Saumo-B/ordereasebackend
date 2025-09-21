@@ -16,9 +16,21 @@ const express_1 = require("express");
 require("dotenv/config");
 const Order_1 = require("../models/Order");
 const token_1 = require("../lib/token");
-const mongoose_1 = __importDefault(require("mongoose"));
 const Menu_1 = require("../models/Menu");
+const inventoryService_1 = require("../lib/inventoryService");
 const pg_sdk_node_1 = require("pg-sdk-node");
+const mongoose_1 = __importDefault(require("mongoose"));
+// type OrderDoc = mongoose.Document & {
+//   lineItems: LineItem[];
+//   status: "created" | "paid" | "done" | "failed";
+//   served: boolean;
+//   amount: number;
+//   currency: string;      // <-- add this
+//   orderToken: string;    // <-- add this
+//   customer?: Customer;
+//   createdAt?: Date;
+//   updatedAt?: Date;
+// };
 const router = (0, express_1.Router)();
 const client = pg_sdk_node_1.StandardCheckoutClient.getInstance(process.env.MERCHANT_ID, process.env.SALT_KEY, parseInt(process.env.SALT_INDEX), pg_sdk_node_1.Env.SANDBOX);
 // Create order
@@ -55,6 +67,12 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             customer,
             orderToken,
         });
+        try {
+            yield (0, inventoryService_1.reserveInventory)(order); // checks availability & increments reservedQuantity
+        }
+        catch (err) {
+            return res.status(400).json({ error: err instanceof Error ? err.message : "Not enough stock" });
+        }
         // 🔹 Setup redirect URL for PhonePe
         const redirectUrl = `${process.env.BACKEND_ORIGIN}/api/orders/status?id=${order.id}`;
         const request = pg_sdk_node_1.StandardCheckoutPayRequest.builder()
@@ -187,6 +205,7 @@ router.get("/detail", (req, res, next) => __awaiter(void 0, void 0, void 0, func
 //   }
 // });
 // PATCH /api/orders/:id
+// PATCH /orders/:id
 router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
@@ -194,14 +213,15 @@ router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ error: "Invalid MongoDB ObjectId for order" });
         }
+        // Fetch the order
         const order = yield Order_1.Order.findById(id);
         if (!order)
             return res.status(404).json({ error: "Order not found" });
-        // Prevent updates if order is already paid
+        // Block updates if already paid
         if (order.status === "paid") {
             return res.status(400).json({ error: "Paid orders cannot be updated" });
         }
-        // Validate items
+        // Validate new items
         for (const { menuItem, qty, price } of items) {
             if (!mongoose_1.default.Types.ObjectId.isValid(menuItem)) {
                 return res.status(400).json({ error: `Invalid menuItem ID: ${menuItem}` });
@@ -217,17 +237,37 @@ router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
                 return res.status(400).json({ error: `Missing/invalid price for menuItem ${menuDoc.name}` });
             }
         }
-        // ✅ Replace items instead of merging
-        order.lineItems = items;
-        // Recalculate grand total
+        // Release inventory for old items
+        yield (0, inventoryService_1.releaseInventory)(order.lineItems.map((it) => ({
+            menuItem: it.menuItem,
+            qty: it.qty,
+        })));
+        // Replace items
+        order.lineItems = items.map((it) => ({
+            menuItem: it.menuItem,
+            qty: it.qty,
+            price: it.price,
+            served: false,
+        })); // Properly cast to DocumentArray type
+        // Reserve inventory for new items
+        try {
+            yield (0, inventoryService_1.reserveInventory)(order);
+        }
+        catch (err) {
+            return res
+                .status(400)
+                .json({ error: err instanceof Error ? err.message : "Not enough stock" });
+        }
+        // Recalculate total
         order.amount = order.lineItems.reduce((sum, it) => sum + it.qty * it.price, 0);
-        // Merge customer (only overwrite provided fields)
+        // Merge customer info
         if (customer) {
             order.customer = Object.assign(Object.assign({}, order.customer), customer);
         }
-        // Reset served flag because order changed
+        // Reset served flag if needed
         if (order.served)
             order.served = false;
+        // Save changes
         yield order.save();
         return res.json({ message: "Order updated successfully", order });
     }

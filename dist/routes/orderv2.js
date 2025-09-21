@@ -13,6 +13,7 @@ const express_1 = require("express");
 require("dotenv/config");
 const Order_1 = require("../models/Order");
 const token_1 = require("../lib/token");
+const inventoryService_1 = require("../lib/inventoryService");
 const router = (0, express_1.Router)();
 // Create order
 router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
@@ -29,6 +30,12 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             customer,
             orderToken,
         });
+        try {
+            yield (0, inventoryService_1.reserveInventory)(order); // checks availability & increments reservedQuantity
+        }
+        catch (err) {
+            return res.status(400).json({ error: err instanceof Error ? err.message : "Not enough stock" });
+        }
         return res.json({
             id: order.id,
             amount: order.amount,

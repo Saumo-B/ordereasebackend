@@ -8,35 +8,78 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.deductInventory = deductInventory;
-const Menu_1 = require("../models/Menu");
-const Ingredients_1 = require("../models/Ingredients");
-const Order_1 = require("../models/Order");
-function deductInventory(orderId) {
+exports.reserveInventory = reserveInventory;
+exports.releaseInventory = releaseInventory;
+const mongoose_1 = __importDefault(require("mongoose"));
+// Deduct inventory function
+function deductInventory(order) {
     return __awaiter(this, void 0, void 0, function* () {
-        const order = yield Order_1.Order.findById(orderId).populate("lineItems.menuItem");
-        if (!order)
-            throw new Error("Order not found");
-        console.log("Starting deduction for order", orderId);
         for (const item of order.lineItems) {
-            const menuItem = yield Menu_1.MenuItem.findById(item.menuItem).populate("recipe.ingredient");
-            if (!menuItem) {
-                console.warn("MenuItem not found for ID:", item.menuItem);
-                continue;
-            }
-            for (const recipe of menuItem.recipe) {
-                const ingredient = yield Ingredients_1.Ingredient.findById(recipe.ingredient._id);
-                if (!ingredient)
-                    continue;
-                const deduction = item.qty * recipe.qtyRequired;
-                if (ingredient.quantity < deduction) {
-                    throw new Error(`Not enough ${ingredient.name} in stock`);
-                }
-                ingredient.quantity -= deduction;
+            const menuItem = yield mongoose_1.default.model("MenuItem").findById(item.menuItem)
+                .populate("recipe.ingredient");
+            if (!menuItem)
+                throw new Error(`Menu item ${item.menuItem} not found`);
+            for (const ing of menuItem.recipe) {
+                const ingredient = ing.ingredient;
+                const qtyToDeduct = ing.qtyRequired * item.qty;
+                ingredient.quantity -= qtyToDeduct;
+                ingredient.reservedQuantity -= qtyToDeduct;
                 yield ingredient.save();
-                console.log(`✅ Deducted ${deduction} ${ingredient.unit} of ${ingredient.name}`);
+                menuItem.outOfStock = ingredient.quantity - ingredient.reservedQuantity <= 0;
+                yield menuItem.save();
             }
+        }
+    });
+}
+function reserveInventory(order) {
+    return __awaiter(this, void 0, void 0, function* () {
+        for (const item of order.lineItems) {
+            const menuItem = yield mongoose_1.default.model("MenuItem")
+                .findById(item.menuItem)
+                .populate("recipe.ingredient");
+            if (!menuItem)
+                throw new Error(`Menu item ${item.menuItem} not found`);
+            for (const r of menuItem.recipe) {
+                const ingredient = r.ingredient;
+                const requiredQty = r.qtyRequired * item.qty;
+                if (ingredient.quantity - ingredient.reservedQuantity < requiredQty) {
+                    throw new Error(`Ingredient ${ingredient.name} is not enough`);
+                }
+                ingredient.reservedQuantity += requiredQty;
+                yield ingredient.save();
+                if (ingredient.quantity - ingredient.reservedQuantity <= 0) {
+                    menuItem.outOfStock = true;
+                    yield menuItem.save();
+                }
+            }
+        }
+    });
+}
+// Release based on items
+function releaseInventory(items) {
+    return __awaiter(this, void 0, void 0, function* () {
+        for (const it of items) {
+            const menuItem = yield mongoose_1.default.model("MenuItem")
+                .findById(it.menuItem)
+                .populate("recipe.ingredient");
+            if (!menuItem)
+                throw new Error("Menu item not found");
+            for (const r of menuItem.recipe) {
+                const ingredient = r.ingredient;
+                const qtyToRelease = r.qtyRequired * it.qty;
+                ingredient.reservedQuantity = Math.max(0, ingredient.reservedQuantity - qtyToRelease);
+                yield ingredient.save();
+            }
+            menuItem.outOfStock = menuItem.recipe.some((r) => {
+                const ingredient = r.ingredient;
+                return ingredient.quantity - ingredient.reservedQuantity < r.qtyRequired;
+            });
+            yield menuItem.save();
         }
     });
 }

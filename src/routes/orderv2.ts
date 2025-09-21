@@ -1,7 +1,9 @@
 import { Router } from "express";
 import "dotenv/config";
-import { Order } from "../models/Order";
+import { Order,OrderDoc } from "../models/Order";
 import { makeToken } from "../lib/token";
+import { reserveInventory } from "../lib/inventoryService";
+import mongoose, { Types } from "mongoose";
 
 const router = Router();
 
@@ -19,7 +21,13 @@ router.post("/", async (req, res, next) => {
       lineItems: items,
       customer,
       orderToken,
-    });
+    }) as OrderDoc;
+    try {
+        await reserveInventory(order); // checks availability & increments reservedQuantity
+      } catch (err) {
+        return res.status(400).json({ error: err instanceof Error ? err.message : "Not enough stock" });
+      }
+
 
     return res.json({
       id: order.id,
