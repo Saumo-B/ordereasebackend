@@ -9,33 +9,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deductInventory = deductInventory;
 exports.reserveInventory = reserveInventory;
 exports.releaseInventory = releaseInventory;
+exports.deductInventory = deductInventory;
 const Menu_1 = require("../models/Menu");
-// ---- Deduct inventory after order is confirmed ----
-function deductInventory(order_1) {
-    return __awaiter(this, arguments, void 0, function* (order, session = null) {
-        for (const li of order.lineItems) {
-            const menuItem = yield Menu_1.MenuItem.findById(li.menuItem)
-                .populate("recipe.ingredient")
-                .session(session);
-            if (!menuItem)
-                throw new Error(`Menu item not found: ${li.menuItem}`);
-            for (const r of menuItem.recipe) {
-                const ingredient = r.ingredient;
-                const qtyToDeduct = r.qtyRequired * li.qty;
-                ingredient.quantity -= qtyToDeduct;
-                ingredient.reservedQuantity -= qtyToDeduct;
-                if (ingredient.quantity < 0) {
-                    throw new Error(`Negative stock for ${ingredient.name} after deduction`);
-                }
-                yield ingredient.save({ session });
-            }
-        }
-    });
-}
-// ---- Reserve inventory for pending order ----
+// ------------------ RESERVE INVENTORY ------------------
 function reserveInventory(order_1) {
     return __awaiter(this, arguments, void 0, function* (order, session = null) {
         for (const li of order.lineItems) {
@@ -47,21 +25,21 @@ function reserveInventory(order_1) {
             for (const r of menuItem.recipe) {
                 const ingredient = r.ingredient;
                 if (!ingredient || typeof ingredient.quantity !== "number") {
-                    throw new Error(`Ingredient not properly populated for menu item ${menuItem.name}`);
+                    throw new Error(`Ingredient not populated for menu item ${menuItem.name}`);
                 }
                 const requiredQty = r.qtyRequired * li.qty;
                 const available = ingredient.quantity - ingredient.reservedQuantity;
                 if (requiredQty > available) {
                     throw new Error(`Not enough ${ingredient.name}. Available: ${available}, Required: ${requiredQty}`);
                 }
-                // Reserve stock
+                // ✅ Increment reserved quantity
                 ingredient.reservedQuantity += requiredQty;
                 yield ingredient.save({ session });
             }
         }
     });
 }
-// ---- Release reserved inventory for canceled/deleted order ----
+// ------------------ RELEASE INVENTORY ------------------
 function releaseInventory(items_1) {
     return __awaiter(this, arguments, void 0, function* (items, session = null) {
         for (const it of items) {
@@ -73,15 +51,35 @@ function releaseInventory(items_1) {
             for (const r of menuItem.recipe) {
                 const ingredient = r.ingredient;
                 const qtyToRelease = r.qtyRequired * it.qty;
+                // ✅ Decrement reserved quantity safely
                 ingredient.reservedQuantity = Math.max(0, ingredient.reservedQuantity - qtyToRelease);
                 yield ingredient.save({ session });
             }
-            // Update outOfStock status
-            menuItem.outOfStock = menuItem.recipe.some(r => {
-                const ing = r.ingredient;
-                return ing.quantity - ing.reservedQuantity < r.qtyRequired;
-            });
-            yield menuItem.save({ session });
+        }
+    });
+}
+// ------------------ DEDUCT INVENTORY ------------------
+function deductInventory(order_1) {
+    return __awaiter(this, arguments, void 0, function* (order, session = null) {
+        for (const li of order.lineItems) {
+            const menuItem = yield Menu_1.MenuItem.findById(li.menuItem)
+                .populate("recipe.ingredient")
+                .session(session);
+            if (!menuItem)
+                throw new Error(`Menu item not found: ${li.menuItem}`);
+            for (const r of menuItem.recipe) {
+                const ingredient = r.ingredient;
+                if (!ingredient)
+                    throw new Error(`Ingredient not populated for menu item ${menuItem.name}`);
+                const qtyToDeduct = r.qtyRequired * li.qty;
+                if (ingredient.quantity - qtyToDeduct < 0) {
+                    throw new Error(`Not enough ${ingredient.name}. Available: ${ingredient.quantity}, Required: ${qtyToDeduct}`);
+                }
+                // ✅ Deduct both quantity and reservedQuantity
+                ingredient.quantity -= qtyToDeduct;
+                ingredient.reservedQuantity -= qtyToDeduct;
+                yield ingredient.save({ session });
+            }
         }
     });
 }
