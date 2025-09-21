@@ -2,6 +2,7 @@ import { Router } from "express";
 import "dotenv/config";
 import { deductInventory } from "../lib/inventoryService";
 import { Order,OrderDoc } from "../models/Order";
+import { Ingredient } from "../models/Ingredients"; 
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
@@ -133,75 +134,101 @@ router.patch("/status/:orderId", async (req, res, next) => {
 // 📊 GET /api/kitchen/dashboard-stats (IST-based)
 router.get("/dashboard-stats", async (req, res, next) => {
   try {
-    const startOfDay = dayjs().tz(TZ).startOf("day").toDate();
-    const endOfDay = dayjs().tz(TZ).endOf("day").toDate();
+    const startOfToday = dayjs().tz(TZ).startOf("day").toDate();
+    const endOfToday = dayjs().tz(TZ).endOf("day").toDate();
 
+    const startOfYesterday = dayjs().tz(TZ).subtract(1, "day").startOf("day").toDate();
+    const endOfYesterday = dayjs().tz(TZ).subtract(1, "day").endOf("day").toDate();
+
+    // ---- Fetch orders
     const todayOrders = await Order.find({
-      createdAt: { $gte: startOfDay, $lte: endOfDay },
+      createdAt: { $gte: startOfToday, $lte: endOfToday },
     }).populate("lineItems.menuItem");
 
-    if (!todayOrders.length) {
+    const yesterdayOrders = await Order.find({
+      createdAt: { $gte: startOfYesterday, $lte: endOfYesterday },
+    });
+
+    // ---- If no data
+    if (!todayOrders.length && !yesterdayOrders.length) {
       return res.json({
-        todayStats: { totalRevenue: 0, totalOrders: 0, averageOrderValue: 0 },
-        salesByHour: [],
-        topSellingItems: [],
-        orderStatusCounts: [],
+        kpis: {
+          todaysSales: 0,
+          yesterdaysSales: 0,
+          orderCounts: { total: 0, completed: 0, pending: 0, cancelled: 0 },
+          averageOrderValue: 0,
+          lowStockItemCount: 0,
+          repeatCustomerCount: 0,
+          averagePrepTimeMinutes: 0,
+        },
+        salesTodayByHour: [],
+        salesYesterdayByHour: [],
+        lowStockItems: [],
       });
     }
 
-    // ---- Today stats
-    const paidOrders = todayOrders.filter(o => ["paid", "done"].includes(o.status));
-    const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
-    const totalOrders = todayOrders.length;
-    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+    // ---- Helpers
+    const calcRevenue = (orders: any[]) =>
+      orders.filter(o => ["paid", "done"].includes(o.status))
+            .reduce((sum, o) => sum + (o.amount || 0), 0);
 
-    // ---- Sales by hour
-    const salesByHourMap: Record<string, number> = {};
-    for (const order of paidOrders) {
-      const hour = dayjs(order.createdAt).tz(TZ).hour();
-      const label =
-        hour === 0 ? "12am" :
-        hour < 12 ? `${hour}am` :
-        hour === 12 ? "12pm" : `${hour - 12}pm`;
-      salesByHourMap[label] = (salesByHourMap[label] || 0) + (order.amount || 0);
-    }
-    const salesByHour = Object.entries(salesByHourMap).map(([hour, revenue]) => ({
-      hour,
-      revenue,
-    }));
+    const groupByHour = (orders: any[]) => {
+      const salesByHourMap: Record<string, number> = {};
+      for (const order of orders.filter(o => ["paid", "done"].includes(o.status))) {
+        const hour = dayjs(order.createdAt).tz(TZ).hour();
+        const label =
+          hour === 0 ? "12am" :
+          hour < 12 ? `${hour}am` :
+          hour === 12 ? "12pm" : `${hour - 12}pm`;
+        salesByHourMap[label] = (salesByHourMap[label] || 0) + (order.amount || 0);
+      }
+      return Object.entries(salesByHourMap).map(([hour, revenue]) => ({ hour, revenue }));
+    };
 
-    // ---- Top selling items
-    const itemCount: Record<string, number> = {};
+    // ---- KPIs
+    const todaysSales = calcRevenue(todayOrders);
+    const yesterdaysSales = calcRevenue(yesterdayOrders);
+    const orderCounts = {
+      total: todayOrders.length,
+      completed: todayOrders.filter(o => o.status === "done").length,
+      pending: todayOrders.filter(o => o.status === "created").length,
+      cancelled: todayOrders.filter(o => o.status === "failed").length,
+    };
+    const averageOrderValue =
+      orderCounts.total > 0 ? todaysSales / orderCounts.total : 0;
+
+    // ---- Low Stock Items (threshold: < 5 units/kg/etc)
+    const lowStockItems = await Ingredient.find({ quantity: { $lt: 5 } })
+      .select("name quantity unit")
+      .lean();
+
+    // ---- Repeat Customer Count (customers who placed >1 order today)
+    const customerOrderMap: Record<string, number> = {};
     for (const order of todayOrders) {
-      for (const item of order.lineItems) {
-        const name = (item.menuItem as any)?.name || "Unknown Item";
-        itemCount[name] = (itemCount[name] || 0) + item.qty;
+      const phone = order.customer?.phone;
+      if (phone) {
+        customerOrderMap[phone] = (customerOrderMap[phone] || 0) + 1;
       }
     }
-    const topSellingItems = Object.entries(itemCount)
-      .map(([name, count]) => ({ name, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
+    const repeatCustomerCount = Object.values(customerOrderMap).filter(count => count > 1).length;
 
-    // ---- Order status counts
-    const statusCount: Record<string, number> = {};
-    for (const order of todayOrders) {
-      statusCount[order.status] = (statusCount[order.status] || 0) + 1;
-    }
-    const orderStatusCounts = Object.entries(statusCount).map(([status, count]) => ({
-      status,
-      count,
-    }));
+
+    // ---- Average Prep Time (placeholder, unless you track `prepTime`)
+    const averagePrepTimeMinutes = 15;
 
     return res.json({
-      todayStats: {
-        totalRevenue,
-        totalOrders,
+      kpis: {
+        todaysSales,
+        yesterdaysSales,
+        orderCounts,
         averageOrderValue: Number(averageOrderValue.toFixed(2)),
+        lowStockItemCount: lowStockItems.length,
+        repeatCustomerCount,
+        averagePrepTimeMinutes,
       },
-      salesByHour,
-      topSellingItems,
-      orderStatusCounts,
+      salesTodayByHour: groupByHour(todayOrders),
+      salesYesterdayByHour: groupByHour(yesterdayOrders),
+      lowStockItems,
     });
   } catch (e) {
     console.error("Dashboard stats error:", e);
