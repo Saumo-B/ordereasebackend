@@ -7,7 +7,7 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 
-import mongoose, { Types } from "mongoose";
+// import mongoose, { Types } from "mongoose";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -247,36 +247,109 @@ router.get("/sales-report", async (req, res, next) => {
     const start = dayjs(startDate).startOf("day").toDate();
     const end = dayjs(endDate).endOf("day").toDate();
 
-    // Fetch orders in range
+    // Fetch all orders in range (include refunds for summary)
     const orders = await Order.find({
       createdAt: { $gte: start, $lte: end },
-      status: { $in: ["paid", "done"] }, // only count successful orders
     })
+      .populate("lineItems.menuItem")
       .sort({ createdAt: 1 })
       .lean();
 
     if (!orders.length) {
       return res.json({
-        summary: { totalRevenue: 0, totalOrders: 0, averageOrderValue: 0 },
+        summary: {
+          totalRevenue: 0,
+          totalOrders: 0,
+          averageOrderValue: 0,
+          totalRefunds: 0,
+          refundedOrdersCount: 0,
+        },
         salesTrend: [],
-        orders: [],
+        itemAnalysis: { topSellingItems: [] },
+        customerInsights: {
+          newVsReturning: { new: 0, returning: 0 },
+          highSpendersCount: 0,
+        },
+        paymentMethods: [],
+        detailedOrders: [],
       });
     }
 
     // ---- Summary
-    const totalRevenue = orders.reduce((sum, o) => sum + (o.amount || 0), 0);
-    const totalOrders = orders.length;
-    const averageOrderValue = totalRevenue / totalOrders;
+    const paidOrders = orders.filter(o => ["paid", "done"].includes(o.status));
+    const refundedOrders = orders.filter(o => o.status === "failed");
+
+    const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
+    const totalOrders = paidOrders.length;
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    const totalRefunds = refundedOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
+    const refundedOrdersCount = refundedOrders.length;
 
     // ---- Sales trend (group by date)
-    const trendMap: Record<string, number> = {};
-    for (const order of orders) {
+    const trendMap: Record<string, { revenue: number; count: number }> = {};
+    for (const order of paidOrders) {
       const date = dayjs(order.createdAt).format("YYYY-MM-DD");
-      trendMap[date] = (trendMap[date] || 0) + (order.amount || 0);
+      if (!trendMap[date]) trendMap[date] = { revenue: 0, count: 0 };
+      trendMap[date].revenue += order.amount || 0;
+      trendMap[date].count += 1;
     }
-    const salesTrend = Object.entries(trendMap).map(([date, revenue]) => ({
+    const salesTrend = Object.entries(trendMap).map(([date, v]) => ({
       date,
-      revenue,
+      revenue: v.revenue,
+      orderCount: v.count,
+    }));
+
+    // ---- Item analysis
+    const itemMap: Record<string, { quantity: number; revenue: number }> = {};
+    for (const order of paidOrders) {
+      for (const li of order.lineItems) {
+        const name = (li.menuItem as any)?.name || "Unknown Item";
+        const qty = li.qty || 0;
+        const revenue = (li.price || 0) * qty;
+        if (!itemMap[name]) itemMap[name] = { quantity: 0, revenue: 0 };
+        itemMap[name].quantity += qty;
+        itemMap[name].revenue += revenue;
+      }
+    }
+    const topSellingItems = Object.entries(itemMap)
+      .map(([name, v]) => ({ name, quantity: v.quantity, revenue: v.revenue }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+
+    // ---- Customer insights
+    const customerMap: Record<string, number> = {};
+    for (const order of paidOrders) {
+      const phone = order.customer?.phone;
+      if (phone) customerMap[phone] = (customerMap[phone] || 0) + 1;
+    }
+    const newCustomers = Object.values(customerMap).filter(c => c === 1).length;
+    const returningCustomers = Object.values(customerMap).filter(c => c > 1).length;
+
+    const highSpendersCount = Object.values(customerMap).filter(
+      phoneOrderCount =>
+        paidOrders
+          .filter(o => o.customer?.phone && customerMap[o.customer.phone] === phoneOrderCount)
+          .reduce((sum, o) => sum + (o.amount || 0), 0) > 5000 // Example: >5000 spent
+    ).length;
+
+    // ---- Payment methods
+    // Assuming you have payment method info (if not, you’ll need to add a field)
+    const methodMap: Record<string, number> = {};
+    for (const order of paidOrders) {
+      const method = (order as any).paymentMethod || "Unknown";
+      methodMap[method] = (methodMap[method] || 0) + 1;
+    }
+    const paymentMethods = Object.entries(methodMap).map(([method, count]) => ({ method, count }));
+
+    // ---- Detailed orders
+    const detailedOrders = paidOrders.map(o => ({
+      id: o._id,
+      token: o.orderToken,
+      date: o.createdAt,
+      customerName: o.customer?.name || "Guest",
+      total: o.amount,
+      status: o.status,
     }));
 
     // ---- Response
@@ -285,16 +358,20 @@ router.get("/sales-report", async (req, res, next) => {
         totalRevenue,
         totalOrders,
         averageOrderValue: Number(averageOrderValue.toFixed(2)),
+        totalRefunds,
+        refundedOrdersCount,
       },
       salesTrend,
-      orders: orders.map(o => ({
-        _id: o._id,
-        orderToken: o.orderToken,
-        customer: o.customer,
-        amount: o.amount,
-        status: o.status,
-        createdAt: o.createdAt,
-      })),
+      itemAnalysis: { topSellingItems },
+      customerInsights: {
+        newVsReturning: {
+          new: newCustomers,
+          returning: returningCustomers,
+        },
+        highSpendersCount,
+      },
+      paymentMethods,
+      detailedOrders,
     });
   } catch (err) {
     console.error("Sales report error:", err);
