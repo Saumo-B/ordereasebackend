@@ -9,6 +9,13 @@ const LOCAL_AI_SERVER = process.env.LOCAL_AI_SERVER || "http://localhost:5005";
 
 router.post("/chat", async (req, res) => {
   try {
+    console.log("Received body:", req.body); // <-- log the request body
+
+    // Check if body exists
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return res.status(400).json({ error: "Request body is required" });
+    }
+
     const { prompt } = req.body;
 
     if (!prompt) return res.status(400).json({ error: "Prompt is required" });
