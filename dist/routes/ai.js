@@ -18,6 +18,22 @@ const axios_1 = __importDefault(require("axios"));
 const router = (0, express_1.Router)();
 // Local AI server URL
 const LOCAL_AI_SERVER = process.env.LOCAL_AI_SERVER || "http://localhost:5005";
+router.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        // Call Python AI server root to see if alive
+        const response = yield axios_1.default.get(LOCAL_AI_SERVER);
+        if (response.status === 200) {
+            return res.json({ status: "AI server is alive" });
+        }
+        else {
+            return res.status(503).json({ status: "AI server not responding properly" });
+        }
+    }
+    catch (err) {
+        console.error("AI server check failed:", err.message);
+        return res.status(503).json({ status: "AI server is down", error: err.message });
+    }
+}));
 router.post("/chat", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         console.log("Received body:", req.body); // <-- log the request body
