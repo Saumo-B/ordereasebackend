@@ -289,11 +289,11 @@ router.patch("/:id", async (req, res, next) => {
     );
 
     // Replace items
-      order.lineItems = items.map((it: { menuItem: mongoose.Types.ObjectId; qty: number; price: number }) => ({
+      order.lineItems = items.map((it: { menuItem: mongoose.Types.ObjectId; qty: number; price: number; served: boolean }) => ({
         menuItem: it.menuItem,
         qty: it.qty,
         price: it.price,
-        served: false,
+        served: it.served,
       })) as typeof order.lineItems;  // Properly cast to DocumentArray type
 
     // Reserve inventory for new items

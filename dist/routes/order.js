@@ -248,7 +248,7 @@ router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
             menuItem: it.menuItem,
             qty: it.qty,
             price: it.price,
-            served: false,
+            served: it.served,
         })); // Properly cast to DocumentArray type
         // Reserve inventory for new items
         try {
