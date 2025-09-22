@@ -177,12 +177,19 @@ router.get("/dashboard-stats", async (req, res, next) => {
     const averageOrderValue =
       orderCounts.total > 0 ? todaysSales / orderCounts.total : 0;
 
-    // ---- Low Stock Items (threshold: < 5 units/kg/etc)
-    const lowStockItems = await Ingredient.find({ quantity: { $lt: 5 } })
-      .select("name quantity unit")
-      .lean();
+    // ---- Low Stock Items (based on lowStockThreshold field)
+    const allIngredients = await Ingredient.find().lean();
+    const lowStockItems = allIngredients
+      .filter(i => i.quantity <= (i.lowStockThreshold ?? 5)) // default threshold = 5
+      .map(i => ({
+        _id: i._id,
+        name: i.name,
+        quantity: i.quantity,
+        unit: i.unit,
+        lowStockWarning: true
+      }));
 
-    // ---- Repeat Customer Count (customers who placed >1 order today)
+    // ---- Repeat Customer Count
     const customerOrderMap: Record<string, number> = {};
     for (const order of todayOrders) {
       const phone = order.customer?.phone;
@@ -192,8 +199,7 @@ router.get("/dashboard-stats", async (req, res, next) => {
     }
     const repeatCustomerCount = Object.values(customerOrderMap).filter(count => count > 1).length;
 
-
-    // ---- Average Prep Time (placeholder, unless you track `prepTime`)
+    // ---- Average Prep Time (placeholder)
     const averagePrepTimeMinutes = 15;
 
     return res.json({

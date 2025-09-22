@@ -26,6 +26,7 @@
 *.pem
 /.idea
 /.vercel
+fix_db.js
 
 # debug
 npm-debug.log*

@@ -10,6 +10,7 @@ const IngredientSchema = new mongoose_1.default.Schema({
     unit: { type: String, required: true },
     quantity: { type: Number, required: true, default: 0 }, // actual stock
     reservedQuantity: { type: Number, default: 0 }, // reserved for unpaid orders
+    lowStockThreshold: { type: Number, default: 5 }, // user-defined warning threshold
 }, { timestamps: true });
 exports.Ingredient = mongoose_1.default.model("Ingredient", IngredientSchema);
 //# sourceMappingURL=Ingredients.js.map

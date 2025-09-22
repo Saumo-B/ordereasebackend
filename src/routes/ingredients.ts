@@ -1,6 +1,8 @@
 import { Router } from "express";
 import mongoose from "mongoose";
 import { Ingredient } from "../models/Ingredients";
+import { MenuItem } from "../models/Menu";
+
 
 const router = Router();
 
@@ -42,21 +44,21 @@ router.post("/", async (req, res, next) => {
       if (!ing.name || !ing.unit) {
         return res.status(400).json({ error: "Each ingredient needs name and unit" });
       }
+      if (ing.lowStockThreshold && ing.lowStockThreshold < 0) {
+        return res.status(400).json({ error: "lowStockThreshold must be >= 0" });
+      }
     }
 
-    // Insert in bulk
     const result = await Ingredient.insertMany(ingredients, { ordered: false });
 
     res.status(201).json({
       message: "Ingredients created successfully",
-    //   ingredients: result,
+      // ingredients: result,
     });
   } catch (e: any) {
-    // Handle duplicate error (E11000)
     if (e.code === 11000) {
       return res.status(400).json({ error: "Duplicate ingredient name(s)" });
     }
-
     next(e);
   }
 });
@@ -65,9 +67,16 @@ router.post("/", async (req, res, next) => {
 router.get("/", async (req, res, next) => {
   try {
     const ingredients = await Ingredient.find()
-    .select("-createdAt -updatedAt") // exclude fields
-    .lean();
-    res.json(ingredients);
+      .select("-createdAt -updatedAt")
+      .lean();
+
+    // Add low-stock warning
+    const withWarning = ingredients.map((ing) => ({
+      ...ing,
+      lowStockWarning: ing.quantity <= (ing.lowStockThreshold || 5),
+    }));
+
+    res.json(withWarning);
   } catch (e) {
     next(e);
   }
@@ -85,7 +94,13 @@ router.get("/:id", async (req, res, next) => {
     const ingredient = await Ingredient.findById(id).lean();
     if (!ingredient) return res.status(404).json({ error: "Not found" });
 
-    res.json(ingredient);
+    // Add low-stock warning
+    const ingredientWithWarning = {
+      ...ingredient,
+      lowStockWarning: ingredient.quantity <= (ingredient.lowStockThreshold || 5),
+    };
+
+    res.json(ingredientWithWarning);
   } catch (e) {
     next(e);
   }
@@ -95,7 +110,7 @@ router.get("/:id", async (req, res, next) => {
 router.patch("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { name, quantity, unit } = req.body;
+    const { name, quantity, unit, lowStockThreshold } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ error: "Invalid ID" });
@@ -106,7 +121,10 @@ router.patch("/:id", async (req, res, next) => {
 
     if (name) ingredient.name = name;
     if (unit) ingredient.unit = unit;
-    if (typeof quantity === "number") ingredient.quantity = quantity; // override quantity
+    if (typeof quantity === "number") ingredient.quantity = quantity;
+    if (typeof lowStockThreshold === "number" && lowStockThreshold >= 0) {
+      ingredient.lowStockThreshold = lowStockThreshold;
+    }
 
     await ingredient.save();
     res.json({ message: "Ingredient updated", ingredient });
@@ -124,13 +142,23 @@ router.delete("/:id", async (req, res, next) => {
       return res.status(400).json({ error: "Invalid ID" });
     }
 
-    const deleted = await Ingredient.findByIdAndDelete(id);
-    if (!deleted) return res.status(404).json({ error: "Not found" });
+    // Check if this ingredient is used in any menu item
+    const usedInMenu = await MenuItem.findOne({ "recipe.ingredient": id });
+    if (usedInMenu) {
+      return res.status(400).json({
+        error: `Cannot delete ingredient. It is used in menu item: ${usedInMenu.name}`,
+      });
+    }
 
-    res.json({ message: "Ingredient deleted", ingredient: deleted });
+    // Delete ingredient if not used
+    const deleted = await Ingredient.findByIdAndDelete(id);
+    if (!deleted) return res.status(404).json({ error: "Ingredient not found" });
+
+    res.json({ message: "Ingredient deleted successfully", ingredient: deleted });
   } catch (e) {
     next(e);
   }
 });
+
 
 export default router;

@@ -167,11 +167,18 @@ router.get("/dashboard-stats", (req, res, next) => __awaiter(void 0, void 0, voi
             cancelled: todayOrders.filter(o => o.status === "failed").length,
         };
         const averageOrderValue = orderCounts.total > 0 ? todaysSales / orderCounts.total : 0;
-        // ---- Low Stock Items (threshold: < 5 units/kg/etc)
-        const lowStockItems = yield Ingredients_1.Ingredient.find({ quantity: { $lt: 5 } })
-            .select("name quantity unit")
-            .lean();
-        // ---- Repeat Customer Count (customers who placed >1 order today)
+        // ---- Low Stock Items (based on lowStockThreshold field)
+        const allIngredients = yield Ingredients_1.Ingredient.find().lean();
+        const lowStockItems = allIngredients
+            .filter(i => { var _a; return i.quantity <= ((_a = i.lowStockThreshold) !== null && _a !== void 0 ? _a : 5); }) // default threshold = 5
+            .map(i => ({
+            _id: i._id,
+            name: i.name,
+            quantity: i.quantity,
+            unit: i.unit,
+            lowStockWarning: true
+        }));
+        // ---- Repeat Customer Count
         const customerOrderMap = {};
         for (const order of todayOrders) {
             const phone = (_a = order.customer) === null || _a === void 0 ? void 0 : _a.phone;
@@ -180,7 +187,7 @@ router.get("/dashboard-stats", (req, res, next) => __awaiter(void 0, void 0, voi
             }
         }
         const repeatCustomerCount = Object.values(customerOrderMap).filter(count => count > 1).length;
-        // ---- Average Prep Time (placeholder, unless you track `prepTime`)
+        // ---- Average Prep Time (placeholder)
         const averagePrepTimeMinutes = 15;
         return res.json({
             kpis: {
