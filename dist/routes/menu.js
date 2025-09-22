@@ -89,19 +89,29 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
         // Validate each menu item
         for (const item of menuItems) {
             if (!item.name || !item.price) {
-                return res
-                    .status(400)
-                    .json({ error: "Each item must have name and price" });
+                return res.status(400).json({ error: "Each item must have name and price" });
+            }
+            // Validate ingredient IDs if recipe provided
+            if (Array.isArray(item.recipe)) {
+                for (const r of item.recipe) {
+                    if (!mongoose_1.default.Types.ObjectId.isValid(r.ingredient)) {
+                        return res
+                            .status(400)
+                            .json({ error: `Invalid ingredient ID: ${r.ingredient}` });
+                    }
+                }
             }
         }
         // Insert many at once
         const result = yield Menu_1.MenuItem.insertMany(menuItems, { ordered: false });
         return res.status(201).json({
             message: "Menu items created successfully",
-            items: result,
+            // items: result,
         });
     }
     catch (e) {
+        // 🔹 Print full error in server logs
+        console.error("MenuItem creation failed:", e);
         if (e.code === 11000) {
             return res.status(400).json({ error: "Duplicate name detected" });
         }
@@ -109,10 +119,11 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             return res.status(400).json({ error: e.message });
         }
         if (e.name === "CastError") {
-            return res.status(400).json({ error: `Invalid value: ${e.value}` });
+            return res
+                .status(400)
+                .json({ error: `Invalid value for field: ${e.path}` });
         }
-        console.error("Menu item insert error:", e);
-        return res.status(500).json({ error: "Something went wrong" });
+        return res.status(500).json({ error: "Internal server error" });
     }
 }));
 /**
