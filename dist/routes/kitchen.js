@@ -45,6 +45,10 @@ router.get("/today", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
                     name: ((_a = li.menuItem) === null || _a === void 0 ? void 0 : _a.name) || "Unknown",
                 });
             }) })));
+        // await Ingredient.updateMany(
+        //   { reservedQuantity: { $exists: false } },
+        //   { $set: { reservedQuantity: 0 } }
+        // );
         return res.json({
             count: transformed.length,
             orders: transformed,

@@ -98,14 +98,21 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
         const result = yield Menu_1.MenuItem.insertMany(menuItems, { ordered: false });
         return res.status(201).json({
             message: "Menu items created successfully",
-            //   items: result,
+            items: result,
         });
     }
     catch (e) {
         if (e.code === 11000) {
             return res.status(400).json({ error: "Duplicate name detected" });
         }
-        next(e);
+        if (e.name === "ValidationError") {
+            return res.status(400).json({ error: e.message });
+        }
+        if (e.name === "CastError") {
+            return res.status(400).json({ error: `Invalid value: ${e.value}` });
+        }
+        console.error("Menu item insert error:", e);
+        return res.status(500).json({ error: "Something went wrong" });
     }
 }));
 /**

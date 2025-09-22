@@ -47,6 +47,7 @@ app.get("/", (req, res) => res.send("Payment engine is running"));
 mongoose_1.default
     .connect(process.env.MONGODB_URI)
     .then(() => {
+    console.log(`Mongo Connected`);
     app.listen(process.env.PORT, () => {
         console.log(`Server listening on port ${process.env.PORT}`);
     });
