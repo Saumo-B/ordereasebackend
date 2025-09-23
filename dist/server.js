@@ -38,6 +38,9 @@ app.use(unless([
     /^\/api\/auth\/register/,
     /^\/api\/menu/,
     /^\/api\/kitchen/,
+    /^\/api\/myorder/,
+    /^\/api\/orderv2/,
+    /^\/api\/order/,
     /^\/$/,
 ], auth_1.authenticate));
 // Global CORS
