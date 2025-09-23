@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { User, IUser } from "../models/User";
 import { authenticate } from "../middleware/auth";
 import { requireRole } from "../middleware/role";
+// import { PERMISSION } from "../lib/permission";
 
 const router = express.Router();
 

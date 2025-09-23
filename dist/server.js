@@ -17,6 +17,8 @@ const menu_1 = __importDefault(require("./routes/menu"));
 const ingredients_1 = __importDefault(require("./routes/ingredients"));
 const table_1 = __importDefault(require("./routes/table"));
 const userAuth_1 = __importDefault(require("./routes/userAuth"));
+const auth_1 = require("./middleware/auth");
+const role_1 = require("./middleware/role");
 const ai_1 = __importDefault(require("./routes/ai"));
 const app = (0, express_1.default)();
 // Helmet and relaxed CSP
@@ -26,6 +28,8 @@ app.use((0, helmet_1.default)({
 // Global CORS
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
+app.use(auth_1.authenticate); // populate req.user
+app.use(role_1.autoPermission); // enforce from central map
 // API routes
 app.use("/api/orders", order_1.default);
 app.use("/api/kitchen", kitchen_1.default);
@@ -44,7 +48,7 @@ app.get("/api/swagger.json", (req, res) => {
     res.sendFile(path_1.default.join(__dirname, "swagger-output.json"));
 });
 // Root
-app.get("/", (req, res) => res.send("Payment engine is running"));
+app.get("/", (req, res) => res.status(200).json({ STATUS: "Payment engine is running" }));
 // Start server
 mongoose_1.default
     .connect(process.env.MONGODB_URI)

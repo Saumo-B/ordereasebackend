@@ -1,0 +1,53 @@
+// src/lib/permissionMap.ts
+import { PERMISSIONS } from "./permission";
+
+export const permissionMap: Record<string, string> = {
+  // ----------------------
+  // Menu routes
+  // ----------------------
+  "POST /api/menu": PERMISSIONS.MENU_CREATE,
+  "GET /api/menu": PERMISSIONS.MENU_VIEW,
+  "GET /api/menu/:id": PERMISSIONS.MENU_VIEW,
+  "PATCH /api/menu/:id": PERMISSIONS.MENU_UPDATE,
+  "DELETE /api/menu/:id": PERMISSIONS.MENU_DELETE,
+
+  // ----------------------
+  // Ingredient routes
+  // ----------------------
+  "POST /api/ingredients": PERMISSIONS.INGRDIENT_CREATE,
+  "GET /api/ingredients": PERMISSIONS.INGREDIENT_VIEW,
+  "GET /api/ingredients/:id": PERMISSIONS.INGREDIENT_VIEW,
+  "PATCH /api/ingredients/:id": PERMISSIONS.INGREDIENT_UPDATE,
+  "DELETE /api/ingredients/:id": PERMISSIONS.INGREDIENT_DELETE,
+
+  // ----------------------
+  // Order routes
+  // ----------------------
+  "POST /api/orders": PERMISSIONS.ORDER_CREATE,
+  "GET /api/orders": PERMISSIONS.ORDER_VIEW,
+  "GET /api/orders/:id": PERMISSIONS.ORDER_VIEW,
+  "PATCH /api/orders/:id": PERMISSIONS.ORDER_UPDATE,
+  "DELETE /api/orders/:id": PERMISSIONS.ORDER_DELETE,
+
+  // ----------------------
+  // Table routes
+  // ----------------------
+  "POST /api/table": PERMISSIONS.TABLE_CREATE,
+  "GET /api/table": PERMISSIONS.TABLE_VIEW,
+  "GET /api/table/:id": PERMISSIONS.TABLE_VIEW,
+  "PATCH /api/table/:id": PERMISSIONS.TABLE_UPDATE,
+  "DELETE /api/table/:id": PERMISSIONS.TABLE_DELETE,
+
+  // ----------------------
+  // Dashboard & Reports
+  // ----------------------
+  "GET /api/dashboard-stats": PERMISSIONS.DASHBOARD_VIEW,
+  "GET /api/sales-report": PERMISSIONS.SALESREPORT_VIEW,
+
+  // ----------------------
+  // Staff management
+  // ----------------------
+  "POST /api/register": PERMISSIONS.STAFF_MANAGE,
+  "PATCH /api/assign/:id": PERMISSIONS.STAFF_MANAGE,
+  "DELETE /api/:id": PERMISSIONS.STAFF_MANAGE,
+};

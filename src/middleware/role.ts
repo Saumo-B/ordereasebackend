@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { IUser , UserRole } from "../models/User";
+import { permissionsMap } from "../lib/permissionsMap";
 
 // Role guard
 export const requireRole = (roles: UserRole[]) => {
@@ -22,3 +23,31 @@ export const requirePermission = (permission: string) => {
     next();
   };
 };
+
+export function autoPermission(req: Request, res: Response, next: NextFunction) {
+  const user = req.user as IUser | undefined;
+  if (!user) return res.status(401).json({ error: "Unauthorized" });
+
+  // Owner bypass
+  if (user.role === "owner") return next();
+
+  // Normalize route key (method + path)
+  const key = `${req.method.toUpperCase()} ${req.route?.path}`;
+
+  const required = permissionsMap[key];
+  if (!required) {
+    // route has no explicit restriction
+    return next();
+  }
+
+  // Manager shortcut
+  if (user.role === "manager" && required === "staff:manage") {
+    return next();
+  }
+
+  if (!user.permissions.includes(required)) {
+    return res.status(403).json({ error: "Permission denied" });
+  }
+
+  next();
+}

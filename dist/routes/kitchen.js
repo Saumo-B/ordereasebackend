@@ -42,6 +42,7 @@ router.get("/today", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
                 return ({
                     qty: li.qty,
                     price: li.price,
+                    served: li.served,
                     name: ((_a = li.menuItem) === null || _a === void 0 ? void 0 : _a.name) || "Unknown",
                 });
             }) })));

@@ -34,6 +34,7 @@ router.get("/today", async (req, res, next) => {
       lineItems: order.lineItems.map((li: any) => ({
         qty: li.qty,
         price: li.price,
+        served: li.served,
         name: li.menuItem?.name || "Unknown",
       })),
     }));

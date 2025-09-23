@@ -14,6 +14,9 @@ import ingredients from "./routes/ingredients";
 import table from "./routes/table";
 import user from "./routes/userAuth";
 
+import { authenticate } from "./middleware/auth";
+import { autoPermission } from "./middleware/role";
+
 import aiRouter from "./routes/ai";
 
 const app = express();
@@ -28,6 +31,9 @@ app.use(
 // Global CORS
 app.use(cors());
 app.use(express.json());
+
+app.use(authenticate);   // populate req.user
+app.use(autoPermission); // enforce from central map
 
 // API routes
 app.use("/api/orders", orders);
@@ -51,7 +57,7 @@ app.get("/api/swagger.json", (req, res) => {
 
 
 // Root
-app.get("/", (req, res) => res.send("Payment engine is running"));
+app.get("/", (req, res) => res.status(200).json({STATUS:"Payment engine is running"}));
 
 // Start server
 mongoose

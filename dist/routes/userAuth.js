@@ -18,6 +18,7 @@ const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = require("../models/User");
 const auth_1 = require("../middleware/auth");
 const role_1 = require("../middleware/role");
+// import { PERMISSION } from "../lib/permission";
 const router = express_1.default.Router();
 const JWT_SECRET = process.env.JWT_SECRET || "changeme";
 // Generate JWT
