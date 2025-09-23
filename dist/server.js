@@ -37,7 +37,7 @@ app.use(unless([
     /^\/api\/auth\/login/,
     /^\/api\/auth\/register/,
     /^\/api\/menu/,
-    /^\/api\/kitchen\/$/,
+    /^\/api\/kitchen/,
     /^\/$/,
 ], auth_1.authenticate));
 // Global CORS

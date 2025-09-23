@@ -43,7 +43,7 @@ app.use(
       /^\/api\/auth\/login/,
       /^\/api\/auth\/register/,
       /^\/api\/menu/,
-      /^\/api\/kitchen\/$/,
+      /^\/api\/kitchen/,
       /^\/$/, 
     ],
     authenticate
