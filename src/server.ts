@@ -27,13 +27,34 @@ app.use(
     contentSecurityPolicy: false
   })
 );
+const unless = (pathPatterns: RegExp[], middleware: any) => {
+  return (req: any, res: any, next: any) => {
+    if (pathPatterns.some(pattern => pattern.test(req.path))) {
+      return next(); // skip auth
+    }
+    return middleware(req, res, next);
+  };
+};
 
+// Apply globally, but skip login/register/menu GET
+app.use(
+  unless(
+    [
+      /^\/api\/auth\/login/,
+      /^\/api\/auth\/register/,
+      /^\/api\/menu/,
+      /^\/api\/kitchen\/$/,
+      /^\/$/, 
+    ],
+    authenticate
+  )
+);
 // Global CORS
 app.use(cors());
 app.use(express.json());
 
-app.use(authenticate);   // populate req.user
-app.use(autoPermission); // enforce from central map
+// app.use(authenticate);   // populate req.user
+// app.use(autoPermission); // enforce from central map
 
 // API routes
 app.use("/api/orders", orders);

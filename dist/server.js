@@ -18,18 +18,33 @@ const ingredients_1 = __importDefault(require("./routes/ingredients"));
 const table_1 = __importDefault(require("./routes/table"));
 const userAuth_1 = __importDefault(require("./routes/userAuth"));
 const auth_1 = require("./middleware/auth");
-const role_1 = require("./middleware/role");
 const ai_1 = __importDefault(require("./routes/ai"));
 const app = (0, express_1.default)();
 // Helmet and relaxed CSP
 app.use((0, helmet_1.default)({
     contentSecurityPolicy: false
 }));
+const unless = (pathPatterns, middleware) => {
+    return (req, res, next) => {
+        if (pathPatterns.some(pattern => pattern.test(req.path))) {
+            return next(); // skip auth
+        }
+        return middleware(req, res, next);
+    };
+};
+// Apply globally, but skip login/register/menu GET
+app.use(unless([
+    /^\/api\/auth\/login/,
+    /^\/api\/auth\/register/,
+    /^\/api\/menu/,
+    /^\/api\/kitchen\/$/,
+    /^\/$/,
+], auth_1.authenticate));
 // Global CORS
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
-app.use(auth_1.authenticate); // populate req.user
-app.use(role_1.autoPermission); // enforce from central map
+// app.use(authenticate);   // populate req.user
+// app.use(autoPermission); // enforce from central map
 // API routes
 app.use("/api/orders", order_1.default);
 app.use("/api/kitchen", kitchen_1.default);
