@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { IUser , UserRole } from "../models/User";
-import { permissionsMap } from "../lib/permissionsMap";
+import { permissionMap } from "../lib/permissionMap";
 
 // Role guard
 export const requireRole = (roles: UserRole[]) => {
@@ -34,7 +34,7 @@ export function autoPermission(req: Request, res: Response, next: NextFunction) 
   // Normalize route key (method + path)
   const key = `${req.method.toUpperCase()} ${req.route?.path}`;
 
-  const required = permissionsMap[key];
+  const required = permissionMap[key];
   if (!required) {
     // route has no explicit restriction
     return next();

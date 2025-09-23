@@ -38,10 +38,6 @@ router.get("/today", async (req, res, next) => {
         name: li.menuItem?.name || "Unknown",
       })),
     }));
-    // await Ingredient.updateMany(
-    //   { reservedQuantity: { $exists: false } },
-    //   { $set: { reservedQuantity: 0 } }
-    // );
 
     return res.json({
       count: transformed.length,
