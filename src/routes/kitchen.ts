@@ -60,78 +60,63 @@ router.patch("/status/:orderId", async (req, res, next) => {
 
     if (!status) return res.status(400).json({ error: "Status is required" });
     const allowedStatuses = ["created", "paid", "done", "failed", "served"];
-    if (!allowedStatuses.includes(status)) return res.status(400).json({ error: "Invalid status" });
+    if (!allowedStatuses.includes(status))
+      return res.status(400).json({ error: "Invalid status" });
 
-    const order = await Order.findById(orderId).session(session);
+    let order = await Order.findById(orderId)
+      .populate("lineItems.menuItem", "name price")
+      .session(session);
+
     if (!order) return res.status(404).json({ error: "Order not found" });
 
-    // Case when status is "paid"
+    // --- Status transitions ---
     if (status === "paid") {
-      if (order.status === "paid") return res.status(409).json({ message: "Order already paid" });
+      if (order.status === "paid")
+        return res.status(409).json({ message: "Order already paid" });
 
-      // Deduct inventory
       await deductInventory(order, session);
 
       order.status = "paid";
-      if (order.served) order.status = "done"; // If served, mark as done
-
-      // Transition active items to served
-      // order.lineItems.forEach((li) => {
-      //   if (li.status.active > 0) {
-      //     li.status.served += li.status.active;  // Move active to served
-      //     li.status.active = 0;  // Reset active
-      //   }
-      // });
-
+      if (order.served) order.status = "done";
       await order.save({ session });
-      await session.commitTransaction();
-      session.endSession();
-    const transformed = order.lineItems.map((li: any) => ({
-        active: li.status?.active || 0,
-        price: li.price,
-        served: li.status?.served || 0,
-        name: li.menuItem?.name || "Unknown",
-      }));      
-
-      return res.json({ message: order.status === "done" ? "Order Completed" : "Order Paid", transformed});
-    }
-
-    // Case when status is "served"
-    if (status === "served") {
+    } else if (status === "served") {
       order.served = true;
 
-      // Move active items to served if order status is "served"
       order.lineItems.forEach((li) => {
         if (li.status && li.status.active > 0) {
-          li.status.served += li.status.active;  // Move active to served
-          li.status.active = 0;  // Reset active
+          li.status.served += li.status.active;
+          li.status.active = 0;
         }
       });
 
-      // If already paid, change to "done"
       if (order.status === "paid") order.status = "done";
-
       await order.save({ session });
-      await session.commitTransaction();
-      session.endSession();
-
-        const transformed = order.lineItems.map((li: any) => ({
-        active: li.status?.active || 0,
-        price: li.price,
-        served: li.status?.served || 0,
-        name: li.menuItem?.name || "Unknown",
-      }));
-      return res.json({ message: order.status === "done" ? "Order Completed" : "Order Served", transformed });
+    } else {
+      order.status = status;
+      await order.save({ session });
     }
 
-    // Handle other statuses
-    order.status = status;
-
-    await order.save({ session });
     await session.commitTransaction();
     session.endSession();
 
-    return res.json({ message: `Order status updated to ${status}`, order });
+    // --- Transform response for lineItems ---
+    const responseOrder = {
+      ...order.toObject(),
+      lineItems: order.lineItems.map((li) => ({
+        active: li.status?.active ?? 0,
+        served: li.status?.served ?? 0,
+        price: li.price,
+        name:  (li.menuItem as any)?.name ??"Unknown Item",
+      })),
+    };
+
+    return res.json({
+      message:
+        order.status === "done"
+          ? "Order Completed"
+          : `Order ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+      order: responseOrder,
+    });
   } catch (err: any) {
     await session.abortTransaction();
     session.endSession();
@@ -139,6 +124,7 @@ router.patch("/status/:orderId", async (req, res, next) => {
     next(err);
   }
 });
+
 
 // 📊 GET /api/kitchen/dashboard-stats (IST-based)
 router.get("/dashboard-stats", async (req, res, next) => {

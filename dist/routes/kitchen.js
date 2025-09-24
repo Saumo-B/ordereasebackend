@@ -68,72 +68,55 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
         const allowedStatuses = ["created", "paid", "done", "failed", "served"];
         if (!allowedStatuses.includes(status))
             return res.status(400).json({ error: "Invalid status" });
-        const order = yield Order_1.Order.findById(orderId).session(session);
+        let order = yield Order_1.Order.findById(orderId)
+            .populate("lineItems.menuItem", "name price")
+            .session(session);
         if (!order)
             return res.status(404).json({ error: "Order not found" });
-        // Case when status is "paid"
+        // --- Status transitions ---
         if (status === "paid") {
             if (order.status === "paid")
                 return res.status(409).json({ message: "Order already paid" });
-            // Deduct inventory
             yield (0, inventoryService_1.deductInventory)(order, session);
             order.status = "paid";
             if (order.served)
-                order.status = "done"; // If served, mark as done
-            // Transition active items to served
-            // order.lineItems.forEach((li) => {
-            //   if (li.status.active > 0) {
-            //     li.status.served += li.status.active;  // Move active to served
-            //     li.status.active = 0;  // Reset active
-            //   }
-            // });
+                order.status = "done";
             yield order.save({ session });
-            yield session.commitTransaction();
-            session.endSession();
-            const transformed = order.lineItems.map((li) => {
-                var _a, _b, _c;
-                return ({
-                    active: ((_a = li.status) === null || _a === void 0 ? void 0 : _a.active) || 0,
-                    price: li.price,
-                    served: ((_b = li.status) === null || _b === void 0 ? void 0 : _b.served) || 0,
-                    name: ((_c = li.menuItem) === null || _c === void 0 ? void 0 : _c.name) || "Unknown",
-                });
-            });
-            return res.json({ message: order.status === "done" ? "Order Completed" : "Order Paid", transformed });
         }
-        // Case when status is "served"
-        if (status === "served") {
+        else if (status === "served") {
             order.served = true;
-            // Move active items to served if order status is "served"
             order.lineItems.forEach((li) => {
                 if (li.status && li.status.active > 0) {
-                    li.status.served += li.status.active; // Move active to served
-                    li.status.active = 0; // Reset active
+                    li.status.served += li.status.active;
+                    li.status.active = 0;
                 }
             });
-            // If already paid, change to "done"
             if (order.status === "paid")
                 order.status = "done";
             yield order.save({ session });
-            yield session.commitTransaction();
-            session.endSession();
-            const transformed = order.lineItems.map((li) => {
-                var _a, _b, _c;
-                return ({
-                    active: ((_a = li.status) === null || _a === void 0 ? void 0 : _a.active) || 0,
-                    price: li.price,
-                    served: ((_b = li.status) === null || _b === void 0 ? void 0 : _b.served) || 0,
-                    name: ((_c = li.menuItem) === null || _c === void 0 ? void 0 : _c.name) || "Unknown",
-                });
-            });
-            return res.json({ message: order.status === "done" ? "Order Completed" : "Order Served", transformed });
         }
-        // Handle other statuses
-        order.status = status;
-        yield order.save({ session });
+        else {
+            order.status = status;
+            yield order.save({ session });
+        }
         yield session.commitTransaction();
         session.endSession();
-        return res.json({ message: `Order status updated to ${status}`, order });
+        // --- Transform response for lineItems ---
+        const responseOrder = Object.assign(Object.assign({}, order.toObject()), { lineItems: order.lineItems.map((li) => {
+                var _a, _b, _c, _d, _e, _f;
+                return ({
+                    active: (_b = (_a = li.status) === null || _a === void 0 ? void 0 : _a.active) !== null && _b !== void 0 ? _b : 0,
+                    served: (_d = (_c = li.status) === null || _c === void 0 ? void 0 : _c.served) !== null && _d !== void 0 ? _d : 0,
+                    price: li.price,
+                    name: (_f = (_e = li.menuItem) === null || _e === void 0 ? void 0 : _e.name) !== null && _f !== void 0 ? _f : "Unknown Item",
+                });
+            }) });
+        return res.json({
+            message: order.status === "done"
+                ? "Order Completed"
+                : `Order ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+            order: responseOrder,
+        });
     }
     catch (err) {
         yield session.abortTransaction();
