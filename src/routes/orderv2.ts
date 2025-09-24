@@ -16,7 +16,7 @@ router.post("/", async (req, res, next) => {
     const { items = [], customer } = req.body || {};
 
     // Calculate total
-    const amount = items.reduce((sum: number, it: any) => sum + it.price * it.qty, 0);
+    const amount = items.reduce((sum: number, it: any) => sum + it.price * it.status.active, 0);
     const orderToken = await makeToken();
 
     // Build order object

@@ -26,7 +26,7 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
     try {
         const { items = [], customer } = req.body || {};
         // Calculate total
-        const amount = items.reduce((sum, it) => sum + it.price * it.qty, 0);
+        const amount = items.reduce((sum, it) => sum + it.price * it.status.active, 0);
         const orderToken = yield (0, token_1.makeToken)();
         // Build order object
         const newOrder = new Order_1.Order({
