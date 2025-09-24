@@ -119,7 +119,7 @@ router.patch("/status/:orderId", async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
 
-    return res.json({ message: `Order status updated to ${status}` });
+    return res.json({ message: `Order status updated to ${status}`, order });
   } catch (err: any) {
     await session.abortTransaction();
     session.endSession();

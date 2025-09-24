@@ -115,7 +115,7 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
         yield order.save({ session });
         yield session.commitTransaction();
         session.endSession();
-        return res.json({ message: `Order status updated to ${status}` });
+        return res.json({ message: `Order status updated to ${status}`, order });
     }
     catch (err) {
         yield session.abortTransaction();
