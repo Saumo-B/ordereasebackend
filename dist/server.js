@@ -41,6 +41,9 @@ app.use(unless([
     /^\/api\/myorder/,
     /^\/api\/orderv2/,
     /^\/api\/order/,
+    /^\/api\/ingredients/,
+    /^\/api\/docs/,
+    /^\/api\/swagger.json/,
     /^\/$/,
 ], auth_1.authenticate));
 // Global CORS

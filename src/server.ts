@@ -47,6 +47,9 @@ app.use(
       /^\/api\/myorder/,
       /^\/api\/orderv2/,
       /^\/api\/order/,
+      /^\/api\/ingredients/,
+      /^\/api\/docs/,
+      /^\/api\/swagger.json/,
       /^\/$/, 
     ],
     authenticate
