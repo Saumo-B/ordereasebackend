@@ -109,7 +109,7 @@ router.patch("/status/:orderId", async (req, res, next) => {
       await session.commitTransaction();
       session.endSession();
 
-      return res.json({ message: order.status === "done" ? "Order Completed" : "Order Served" });
+      return res.json({ message: order.status === "done" ? "Order Completed" : "Order Served", order });
     }
 
     // Handle other statuses

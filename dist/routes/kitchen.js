@@ -108,7 +108,7 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
             yield order.save({ session });
             yield session.commitTransaction();
             session.endSession();
-            return res.json({ message: order.status === "done" ? "Order Completed" : "Order Served" });
+            return res.json({ message: order.status === "done" ? "Order Completed" : "Order Served", order });
         }
         // Handle other statuses
         order.status = status;

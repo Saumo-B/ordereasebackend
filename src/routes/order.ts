@@ -301,7 +301,7 @@ router.patch("/:id", async (req, res, next) => {
     session.endSession();
 
     // Send the updated order as the response
-    return res.json({ message: "Order updated successfully", order });
+    return res.json({ message: "Order updated successfully" });
   } catch (e: any) {
     // If something goes wrong, abort the transaction and end the session
     await session.abortTransaction();
