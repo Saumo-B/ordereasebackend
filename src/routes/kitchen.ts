@@ -93,7 +93,7 @@ router.patch("/status/:orderId", async (req, res, next) => {
         name: li.menuItem?.name || "Unknown",
       }));      
 
-      return res.json({ message: order.status === "done" ? "Order Completed" : "Order Paid", orders: transformed});
+      return res.json({ message: order.status === "done" ? "Order Completed" : "Order Paid", transformed});
     }
 
     // Case when status is "served"
@@ -115,7 +115,13 @@ router.patch("/status/:orderId", async (req, res, next) => {
       await session.commitTransaction();
       session.endSession();
 
-      return res.json({ message: order.status === "done" ? "Order Completed" : "Order Served", order });
+        const transformed = order.lineItems.map((li: any) => ({
+        active: li.status?.active || 0,
+        price: li.price,
+        served: li.status?.served || 0,
+        name: li.menuItem?.name || "Unknown",
+      }));
+      return res.json({ message: order.status === "done" ? "Order Completed" : "Order Served", transformed });
     }
 
     // Handle other statuses
