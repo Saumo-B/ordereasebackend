@@ -90,6 +90,15 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
             yield order.save({ session });
             yield session.commitTransaction();
             session.endSession();
+            const transformed = order.lineItems.map((li) => {
+                var _a, _b, _c;
+                return ({
+                    active: ((_a = li.status) === null || _a === void 0 ? void 0 : _a.active) || 0,
+                    price: li.price,
+                    served: ((_b = li.status) === null || _b === void 0 ? void 0 : _b.served) || 0,
+                    name: ((_c = li.menuItem) === null || _c === void 0 ? void 0 : _c.name) || "Unknown",
+                });
+            });
             return res.json({ message: order.status === "done" ? "Order Completed" : "Order Paid", order });
         }
         // Case when status is "served"

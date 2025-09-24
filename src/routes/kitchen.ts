@@ -86,6 +86,12 @@ router.patch("/status/:orderId", async (req, res, next) => {
       await order.save({ session });
       await session.commitTransaction();
       session.endSession();
+    const transformed = order.lineItems.map((li: any) => ({
+        active: li.status?.active || 0,
+        price: li.price,
+        served: li.status?.served || 0,
+        name: li.menuItem?.name || "Unknown",
+      }));      
 
       return res.json({ message: order.status === "done" ? "Order Completed" : "Order Paid", order });
     }
