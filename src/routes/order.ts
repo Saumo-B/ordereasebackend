@@ -260,7 +260,7 @@ router.patch("/:id", async (req, res, next) => {
 
     // Release old inventory
     await releaseInventory(
-      order.lineItems.map((it) => ({ menuItem: it.menuItem, qty: it.qty }))
+      order.lineItems.map((it) => ({ menuItem: it.menuItem, qty: (it.status?.active?? 0)}))
     );
 
     // Validate & replace items
@@ -275,7 +275,7 @@ router.patch("/:id", async (req, res, next) => {
     await reserveInventory(order, session);
 
     // Recalculate total
-    order.amount = order.lineItems.reduce((sum, it) => sum + it.qty * it.price, 0);
+    order.amount = order.lineItems.reduce((sum, it) => sum + (it.status?.active?? 0) * it.price, 0);
 
     // Merge customer info
     if (customer) order.customer = { ...order.customer, ...customer };
@@ -318,7 +318,7 @@ router.delete("/:orderId", async (req, res, next) => {
     // Release reserved inventory for this order
     await releaseInventory(order.lineItems.map(li => ({
       menuItem: li.menuItem,
-      qty: li.qty
+      qty: (li.status?.active??0)
     })), session);
 
     // Delete the order

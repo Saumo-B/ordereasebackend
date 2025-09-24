@@ -222,7 +222,7 @@ router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         if (order.status === "paid")
             return res.status(400).json({ error: "Paid orders cannot be updated" });
         // Release old inventory
-        yield (0, inventoryService_1.releaseInventory)(order.lineItems.map((it) => ({ menuItem: it.menuItem, qty: it.qty })));
+        yield (0, inventoryService_1.releaseInventory)(order.lineItems.map((it) => { var _a, _b; return ({ menuItem: it.menuItem, qty: ((_b = (_a = it.status) === null || _a === void 0 ? void 0 : _a.active) !== null && _b !== void 0 ? _b : 0) }); }));
         // Validate & replace items
         order.lineItems = items.map((it) => ({
             menuItem: it.menuItem,
@@ -233,7 +233,7 @@ router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         // Reserve new inventory
         yield (0, inventoryService_1.reserveInventory)(order, session);
         // Recalculate total
-        order.amount = order.lineItems.reduce((sum, it) => sum + it.qty * it.price, 0);
+        order.amount = order.lineItems.reduce((sum, it) => { var _a, _b; return sum + ((_b = (_a = it.status) === null || _a === void 0 ? void 0 : _a.active) !== null && _b !== void 0 ? _b : 0) * it.price; }, 0);
         // Merge customer info
         if (customer)
             order.customer = Object.assign(Object.assign({}, order.customer), customer);
@@ -268,10 +268,13 @@ router.delete("/:orderId", (req, res, next) => __awaiter(void 0, void 0, void 0,
             return res.status(404).json({ error: "Order not found" });
         }
         // Release reserved inventory for this order
-        yield (0, inventoryService_1.releaseInventory)(order.lineItems.map(li => ({
-            menuItem: li.menuItem,
-            qty: li.qty
-        })), session);
+        yield (0, inventoryService_1.releaseInventory)(order.lineItems.map(li => {
+            var _a, _b;
+            return ({
+                menuItem: li.menuItem,
+                qty: ((_b = (_a = li.status) === null || _a === void 0 ? void 0 : _a.active) !== null && _b !== void 0 ? _b : 0)
+            });
+        }), session);
         // Delete the order
         yield order.deleteOne({ session });
         yield session.commitTransaction();

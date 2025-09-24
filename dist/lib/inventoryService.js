@@ -27,7 +27,8 @@ function reserveInventory(order_1) {
                 if (!ingredient || typeof ingredient.quantity !== "number") {
                     throw new Error(`Ingredient not populated for menu item ${menuItem.name}`);
                 }
-                const requiredQty = r.qtyRequired * li.qty;
+                const status = li.status;
+                const requiredQty = r.qtyRequired * status.active;
                 const available = ingredient.quantity - ingredient.reservedQuantity;
                 if (requiredQty > available) {
                     throw new Error(`Not enough ${ingredient.name}. Available: ${available}, Required: ${requiredQty}`);
@@ -71,7 +72,8 @@ function deductInventory(order_1) {
                 const ingredient = r.ingredient;
                 if (!ingredient)
                     throw new Error(`Ingredient not populated for menu item ${menuItem.name}`);
-                const qtyToDeduct = r.qtyRequired * li.qty;
+                const status = li.status;
+                const qtyToDeduct = r.qtyRequired * status.active;
                 if (ingredient.quantity - qtyToDeduct < 0) {
                     throw new Error(`Not enough ${ingredient.name}. Available: ${ingredient.quantity}, Required: ${qtyToDeduct}`);
                 }

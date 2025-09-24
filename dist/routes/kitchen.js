@@ -71,6 +71,7 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
         const order = yield Order_1.Order.findById(orderId).session(session);
         if (!order)
             return res.status(404).json({ error: "Order not found" });
+        // Case when status is "paid"
         if (status === "paid") {
             if (order.status === "paid")
                 return res.status(409).json({ message: "Order already paid" });
@@ -78,15 +79,30 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
             yield (0, inventoryService_1.deductInventory)(order, session);
             order.status = "paid";
             if (order.served)
-                order.status = "done";
+                order.status = "done"; // If served, mark as done
+            // Transition active items to served
+            // order.lineItems.forEach((li) => {
+            //   if (li.status.active > 0) {
+            //     li.status.served += li.status.active;  // Move active to served
+            //     li.status.active = 0;  // Reset active
+            //   }
+            // });
             yield order.save({ session });
             yield session.commitTransaction();
             session.endSession();
             return res.json({ message: order.status === "done" ? "Order Completed" : "Order Paid", order });
         }
+        // Case when status is "served"
         if (status === "served") {
             order.served = true;
-            order.lineItems.forEach((li) => (li.served = true));
+            // Move active items to served if order status is "served"
+            order.lineItems.forEach((li) => {
+                if (li.status && li.status.active > 0) {
+                    li.status.served += li.status.active; // Move active to served
+                    li.status.active = 0; // Reset active
+                }
+            });
+            // If already paid, change to "done"
             if (order.status === "paid")
                 order.status = "done";
             yield order.save({ session });
@@ -94,7 +110,7 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
             session.endSession();
             return res.json({ message: order.status === "done" ? "Order Completed" : "Order Served", order });
         }
-        // Other statuses
+        // Handle other statuses
         order.status = status;
         yield order.save({ session });
         yield session.commitTransaction();
@@ -267,8 +283,9 @@ router.get("/sales-report", (req, res, next) => __awaiter(void 0, void 0, void 0
         const itemMap = {};
         for (const order of paidOrders) {
             for (const li of order.lineItems) {
+                // Type assertion to let TypeScript know that li will have the virtual 'qty'
                 const name = ((_a = li.menuItem) === null || _a === void 0 ? void 0 : _a.name) || "Unknown Item";
-                const qty = li.qty || 0;
+                const qty = li.qty || 0; // Type assertion to access 'qty' safely
                 const revenue = (li.price || 0) * qty;
                 if (!itemMap[name])
                     itemMap[name] = { quantity: 0, revenue: 0 };

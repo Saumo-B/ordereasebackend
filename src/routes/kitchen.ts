@@ -65,6 +65,7 @@ router.patch("/status/:orderId", async (req, res, next) => {
     const order = await Order.findById(orderId).session(session);
     if (!order) return res.status(404).json({ error: "Order not found" });
 
+    // Case when status is "paid"
     if (status === "paid") {
       if (order.status === "paid") return res.status(409).json({ message: "Order already paid" });
 
@@ -72,7 +73,15 @@ router.patch("/status/:orderId", async (req, res, next) => {
       await deductInventory(order, session);
 
       order.status = "paid";
-      if (order.served) order.status = "done";
+      if (order.served) order.status = "done"; // If served, mark as done
+
+      // Transition active items to served
+      // order.lineItems.forEach((li) => {
+      //   if (li.status.active > 0) {
+      //     li.status.served += li.status.active;  // Move active to served
+      //     li.status.active = 0;  // Reset active
+      //   }
+      // });
 
       await order.save({ session });
       await session.commitTransaction();
@@ -81,9 +90,19 @@ router.patch("/status/:orderId", async (req, res, next) => {
       return res.json({ message: order.status === "done" ? "Order Completed" : "Order Paid", order });
     }
 
+    // Case when status is "served"
     if (status === "served") {
       order.served = true;
-      order.lineItems.forEach((li) => (li.served = true));
+
+      // Move active items to served if order status is "served"
+      order.lineItems.forEach((li) => {
+        if (li.status && li.status.active > 0) {
+          li.status.served += li.status.active;  // Move active to served
+          li.status.active = 0;  // Reset active
+        }
+      });
+
+      // If already paid, change to "done"
       if (order.status === "paid") order.status = "done";
 
       await order.save({ session });
@@ -93,8 +112,9 @@ router.patch("/status/:orderId", async (req, res, next) => {
       return res.json({ message: order.status === "done" ? "Order Completed" : "Order Served", order });
     }
 
-    // Other statuses
+    // Handle other statuses
     order.status = status;
+
     await order.save({ session });
     await session.commitTransaction();
     session.endSession();
@@ -287,14 +307,17 @@ router.get("/sales-report", async (req, res, next) => {
     const itemMap: Record<string, { quantity: number; revenue: number }> = {};
     for (const order of paidOrders) {
       for (const li of order.lineItems) {
+        // Type assertion to let TypeScript know that li will have the virtual 'qty'
         const name = (li.menuItem as any)?.name || "Unknown Item";
-        const qty = li.qty || 0;
+        const qty = (li as any).qty || 0;  // Type assertion to access 'qty' safely
         const revenue = (li.price || 0) * qty;
+
         if (!itemMap[name]) itemMap[name] = { quantity: 0, revenue: 0 };
         itemMap[name].quantity += qty;
         itemMap[name].revenue += revenue;
       }
     }
+
     const topSellingItems = Object.entries(itemMap)
       .map(([name, v]) => ({ name, quantity: v.quantity, revenue: v.revenue }))
       .sort((a, b) => b.quantity - a.quantity)

@@ -38,8 +38,8 @@ export async function reserveInventory(order: OrderDoc, session: mongoose.Client
       if (!ingredient || typeof ingredient.quantity !== "number") {
         throw new Error(`Ingredient not populated for menu item ${menuItem.name}`);
       }
-
-      const requiredQty = r.qtyRequired * li.qty;
+      const status = li.status as { active: number; served: number };
+      const requiredQty = r.qtyRequired * status.active;
       const available = ingredient.quantity - ingredient.reservedQuantity;
 
       if (requiredQty > available) {
@@ -86,8 +86,8 @@ export async function deductInventory(order: OrderDoc, session: mongoose.ClientS
       const ingredient = r.ingredient as unknown as IngredientDoc;
 
       if (!ingredient) throw new Error(`Ingredient not populated for menu item ${menuItem.name}`);
-
-      const qtyToDeduct = r.qtyRequired * li.qty;
+      const status = li.status as { active: number; served: number };
+      const qtyToDeduct = r.qtyRequired * status.active;
 
       if (ingredient.quantity - qtyToDeduct < 0) {
         throw new Error(`Not enough ${ingredient.name}. Available: ${ingredient.quantity}, Required: ${qtyToDeduct}`);
