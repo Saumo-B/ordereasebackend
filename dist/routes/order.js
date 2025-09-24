@@ -213,39 +213,52 @@ router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
     try {
         const { id } = req.params;
         const { items = [], customer } = req.body;
+        // Validate the order ID
         if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ error: "Invalid order ID" });
         }
+        // Fetch the order
         const order = yield Order_1.Order.findById(id).session(session);
         if (!order)
             return res.status(404).json({ error: "Order not found" });
-        if (order.status === "paid")
+        // Prevent updates on paid orders
+        if (order.status === "paid") {
             return res.status(400).json({ error: "Paid orders cannot be updated" });
-        // Release old inventory
-        yield (0, inventoryService_1.releaseInventory)(order.lineItems.map((it) => { var _a, _b; return ({ menuItem: it.menuItem, qty: ((_b = (_a = it.status) === null || _a === void 0 ? void 0 : _a.active) !== null && _b !== void 0 ? _b : 0) }); }));
-        // Validate & replace items
+        }
+        // Release the old inventory based on the active quantities
+        yield (0, inventoryService_1.releaseInventory)(order.lineItems.map((it) => {
+            var _a, _b;
+            return ({
+                menuItem: it.menuItem,
+                qty: (_b = (_a = it.status) === null || _a === void 0 ? void 0 : _a.active) !== null && _b !== void 0 ? _b : 0,
+            });
+        }));
+        // Validate & update line items
         order.lineItems = items.map((it) => ({
             menuItem: it.menuItem,
-            qty: it.qty,
+            status: it.status, // Use the new status (active and served)
             price: it.price,
-            served: it.served || false,
         }));
-        // Reserve new inventory
+        // Reserve new inventory for the updated line items
         yield (0, inventoryService_1.reserveInventory)(order, session);
-        // Recalculate total
+        // Recalculate the total order amount
         order.amount = order.lineItems.reduce((sum, it) => { var _a, _b; return sum + ((_b = (_a = it.status) === null || _a === void 0 ? void 0 : _a.active) !== null && _b !== void 0 ? _b : 0) * it.price; }, 0);
-        // Merge customer info
+        // Merge updated customer info if provided
         if (customer)
             order.customer = Object.assign(Object.assign({}, order.customer), customer);
-        // Reset served flag
+        // Reset the served flag (if any item was served before, reset it)
         if (order.served)
             order.served = false;
+        // Save the updated order
         yield order.save({ session });
+        // Commit the transaction and end the session
         yield session.commitTransaction();
         session.endSession();
+        // Send the updated order as the response
         return res.json({ message: "Order updated successfully", order });
     }
     catch (e) {
+        // If something goes wrong, abort the transaction and end the session
         yield session.abortTransaction();
         session.endSession();
         console.error("Order update failed:", e);

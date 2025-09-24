@@ -250,51 +250,67 @@ router.patch("/:id", async (req, res, next) => {
     const { id } = req.params;
     const { items = [], customer } = req.body;
 
+    // Validate the order ID
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({ error: "Invalid order ID" });
     }
 
+    // Fetch the order
     const order = await Order.findById(id).session(session);
     if (!order) return res.status(404).json({ error: "Order not found" });
-    if (order.status === "paid") return res.status(400).json({ error: "Paid orders cannot be updated" });
 
-    // Release old inventory
+    // Prevent updates on paid orders
+    if (order.status === "paid") {
+      return res.status(400).json({ error: "Paid orders cannot be updated" });
+    }
+
+    // Release the old inventory based on the active quantities
     await releaseInventory(
-      order.lineItems.map((it) => ({ menuItem: it.menuItem, qty: (it.status?.active?? 0)}))
+      order.lineItems.map((it) => ({
+        menuItem: it.menuItem,
+        qty: it.status?.active ?? 0,  
+      }))
     );
 
-    // Validate & replace items
+    // Validate & update line items
     order.lineItems = items.map((it: any) => ({
       menuItem: it.menuItem,
-      qty: it.qty,
+      status: it.status,  // Use the new status (active and served)
       price: it.price,
-      served: it.served || false,
     }));
 
-    // Reserve new inventory
+    // Reserve new inventory for the updated line items
     await reserveInventory(order, session);
 
-    // Recalculate total
-    order.amount = order.lineItems.reduce((sum, it) => sum + (it.status?.active?? 0) * it.price, 0);
+    // Recalculate the total order amount
+    order.amount = order.lineItems.reduce(
+      (sum, it) => sum + (it.status?.active ?? 0) * it.price, 0
+    );
 
-    // Merge customer info
+    // Merge updated customer info if provided
     if (customer) order.customer = { ...order.customer, ...customer };
 
-    // Reset served flag
+    // Reset the served flag (if any item was served before, reset it)
     if (order.served) order.served = false;
 
+    // Save the updated order
     await order.save({ session });
+
+    // Commit the transaction and end the session
     await session.commitTransaction();
     session.endSession();
 
+    // Send the updated order as the response
     return res.json({ message: "Order updated successfully", order });
   } catch (e: any) {
+    // If something goes wrong, abort the transaction and end the session
     await session.abortTransaction();
     session.endSession();
     console.error("Order update failed:", e);
     return res.status(400).json({ error: e.message || "Order update failed" });
   }
 });
+
 
 router.delete("/:orderId", async (req, res, next) => {
   const session = await mongoose.startSession();

@@ -109,7 +109,7 @@ router.patch("/status/:orderId", async (req, res, next) => {
       await session.commitTransaction();
       session.endSession();
 
-      return res.json({ message: order.status === "done" ? "Order Completed" : "Order Served", order });
+      return res.json({ message: order.status === "done" ? "Order Completed" : "Order Served" });
     }
 
     // Handle other statuses
@@ -119,7 +119,7 @@ router.patch("/status/:orderId", async (req, res, next) => {
     await session.commitTransaction();
     session.endSession();
 
-    return res.json({ message: `Order status updated to ${status}`, order });
+    return res.json({ message: `Order status updated to ${status}` });
   } catch (err: any) {
     await session.abortTransaction();
     session.endSession();
