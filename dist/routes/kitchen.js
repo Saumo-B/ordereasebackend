@@ -40,7 +40,7 @@ router.get("/today", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         const transformed = orders.map(order => (Object.assign(Object.assign({}, order), { lineItems: order.lineItems.map((li) => {
                 var _a, _b, _c;
                 return ({
-                    qty: ((_a = li.status) === null || _a === void 0 ? void 0 : _a.active) || 0,
+                    active: ((_a = li.status) === null || _a === void 0 ? void 0 : _a.active) || 0,
                     price: li.price,
                     served: ((_b = li.status) === null || _b === void 0 ? void 0 : _b.served) || 0,
                     name: ((_c = li.menuItem) === null || _c === void 0 ? void 0 : _c.name) || "Unknown",
