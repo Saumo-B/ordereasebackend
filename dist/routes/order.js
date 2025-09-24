@@ -255,7 +255,7 @@ router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         yield session.commitTransaction();
         session.endSession();
         // Send the updated order as the response
-        return res.json({ message: "Order updated successfully" });
+        return res.json({ message: "Order updated successfully", order });
     }
     catch (e) {
         // If something goes wrong, abort the transaction and end the session
