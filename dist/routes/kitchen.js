@@ -68,12 +68,13 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
         const allowedStatuses = ["created", "paid", "done", "failed", "served"];
         if (!allowedStatuses.includes(status))
             return res.status(400).json({ error: "Invalid status" });
-        let order = yield Order_1.Order.findById(orderId)
-            .populate("lineItems.menuItem", "name price")
+        // populate name like in /today
+        const order = yield Order_1.Order.findById(orderId)
+            .populate("lineItems.menuItem", "name")
             .session(session);
         if (!order)
             return res.status(404).json({ error: "Order not found" });
-        // --- Status transitions ---
+        // Case: paid
         if (status === "paid") {
             if (order.status === "paid")
                 return res.status(409).json({ message: "Order already paid" });
@@ -82,7 +83,10 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
             if (order.served)
                 order.status = "done";
             yield order.save({ session });
+            yield session.commitTransaction();
+            session.endSession();
         }
+        // Case: served
         else if (status === "served") {
             order.served = true;
             order.lineItems.forEach((li) => {
@@ -94,29 +98,47 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
             if (order.status === "paid")
                 order.status = "done";
             yield order.save({ session });
+            yield session.commitTransaction();
+            session.endSession();
         }
+        // Other statuses
         else {
             order.status = status;
             yield order.save({ session });
+            yield session.commitTransaction();
+            session.endSession();
         }
-        yield session.commitTransaction();
-        session.endSession();
-        // --- Transform response for lineItems ---
-        const responseOrder = Object.assign(Object.assign({}, order.toObject()), { lineItems: order.lineItems.map((li) => {
-                var _a, _b, _c, _d, _e, _f;
+        // Transform response
+        const transformed = {
+            _id: order._id,
+            status: order.status, // never "served"
+            amount: order.amount,
+            currency: order.currency,
+            served: order.served, // boolean flag
+            lineItems: order.lineItems.map((li) => {
+                var _a, _b, _c;
                 return ({
-                    active: (_b = (_a = li.status) === null || _a === void 0 ? void 0 : _a.active) !== null && _b !== void 0 ? _b : 0,
-                    served: (_d = (_c = li.status) === null || _c === void 0 ? void 0 : _c.served) !== null && _d !== void 0 ? _d : 0,
+                    active: ((_a = li.status) === null || _a === void 0 ? void 0 : _a.active) || 0,
                     price: li.price,
-                    name: (_f = (_e = li.menuItem) === null || _e === void 0 ? void 0 : _e.name) !== null && _f !== void 0 ? _f : "Unknown Item",
+                    served: ((_b = li.status) === null || _b === void 0 ? void 0 : _b.served) || 0,
+                    name: ((_c = li.menuItem) === null || _c === void 0 ? void 0 : _c.name) || "Unknown Item",
                 });
-            }) });
-        return res.json({
-            message: order.status === "done"
-                ? "Order Completed"
-                : `Order ${status.charAt(0).toUpperCase() + status.slice(1)}`,
-            order: responseOrder,
-        });
+            }),
+            customer: order.customer,
+            orderToken: order.orderToken,
+            paymentMethod: order.paymentMethod,
+            createdAt: order.createdAt,
+            updatedAt: order.updatedAt,
+            __v: order.__v,
+        };
+        const message = (order.status === "done"
+            ? "Order Completed"
+            : status === "paid"
+                ? "Order Paid"
+                : order.served
+                    ? "Order Served"
+                    : `Order status updated to ${status}`);
+        return res.json({ message, order: transformed });
     }
     catch (err) {
         yield session.abortTransaction();
