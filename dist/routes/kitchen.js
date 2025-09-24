@@ -38,12 +38,12 @@ router.get("/today", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
             .lean();
         // Transform: replace menuItem with its name
         const transformed = orders.map(order => (Object.assign(Object.assign({}, order), { lineItems: order.lineItems.map((li) => {
-                var _a;
+                var _a, _b, _c;
                 return ({
-                    qty: li.qty,
+                    qty: ((_a = li.status) === null || _a === void 0 ? void 0 : _a.active) || 0,
                     price: li.price,
-                    served: li.served,
-                    name: ((_a = li.menuItem) === null || _a === void 0 ? void 0 : _a.name) || "Unknown",
+                    served: ((_b = li.status) === null || _b === void 0 ? void 0 : _b.served) || 0,
+                    name: ((_c = li.menuItem) === null || _c === void 0 ? void 0 : _c.name) || "Unknown",
                 });
             }) })));
         return res.json({

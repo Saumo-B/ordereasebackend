@@ -32,9 +32,9 @@ router.get("/today", async (req, res, next) => {
     const transformed = orders.map(order => ({
       ...order,
       lineItems: order.lineItems.map((li: any) => ({
-        qty: li.qty,
+        qty: li.status?.active || 0,
         price: li.price,
-        served: li.served,
+        served: li.status?.served || 0,
         name: li.menuItem?.name || "Unknown",
       })),
     }));
