@@ -93,7 +93,7 @@ router.patch("/status/:orderId", async (req, res, next) => {
         name: li.menuItem?.name || "Unknown",
       }));      
 
-      return res.json({ message: order.status === "done" ? "Order Completed" : "Order Paid", order });
+      return res.json({ message: order.status === "done" ? "Order Completed" : "Order Paid", orders: transformed});
     }
 
     // Case when status is "served"

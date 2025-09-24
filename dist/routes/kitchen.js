@@ -99,7 +99,7 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
                     name: ((_c = li.menuItem) === null || _c === void 0 ? void 0 : _c.name) || "Unknown",
                 });
             });
-            return res.json({ message: order.status === "done" ? "Order Completed" : "Order Paid", order });
+            return res.json({ message: order.status === "done" ? "Order Completed" : "Order Paid", orders: transformed });
         }
         // Case when status is "served"
         if (status === "served") {
