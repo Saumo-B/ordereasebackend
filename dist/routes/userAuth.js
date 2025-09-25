@@ -13,7 +13,6 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
-const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = require("../models/User");
 // import { authenticate } from "../middleware/auth";
@@ -47,11 +46,11 @@ router.post("/register",
         if (existing) {
             return res.status(400).json({ error: "Email already registered" });
         }
-        const hashedPassword = yield bcryptjs_1.default.hash(password, 10);
+        // const hashedPassword = await bcrypt.hash(password, 10);
         const user = new User_1.User({
             name,
             email,
-            password: hashedPassword,
+            password,
             role: role || "staff",
         });
         yield user.save();
@@ -68,11 +67,13 @@ router.post("/login", (req, res, next) => __awaiter(void 0, void 0, void 0, func
     try {
         const { email, password } = req.body;
         const user = yield User_1.User.findOne({ email });
-        if (!user)
-            return res.status(401).json({ error: "Invalid credentials" });
-        const isMatch = yield bcryptjs_1.default.compare(password, user.password);
-        if (!isMatch)
-            return res.status(401).json({ error: "Invalid credentials" });
+        if (!user) {
+            return res.status(401).json({ error: "Invalid Email" });
+        }
+        // Direct password match
+        if (user.password !== password) {
+            return res.status(401).json({ error: "Invalid Password" });
+        }
         const token = generateToken(user);
         res.json({ token, user });
     }

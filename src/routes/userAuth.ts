@@ -42,12 +42,12 @@ router.post(
         return res.status(400).json({ error: "Email already registered" });
       }
 
-      const hashedPassword = await bcrypt.hash(password, 10);
+      // const hashedPassword = await bcrypt.hash(password, 10);
 
       const user = new User({
         name,
         email,
-        password: hashedPassword,
+        password,
         role: role || "staff",
       });
 
@@ -70,10 +70,14 @@ router.post(
       const { email, password } = req.body;
 
       const user = await User.findOne({ email });
-      if (!user) return res.status(401).json({ error: "Invalid credentials" });
+      if (!user) {
+        return res.status(401).json({ error: "Invalid Email" });
+      }
 
-      const isMatch = await bcrypt.compare(password, user.password);
-      if (!isMatch) return res.status(401).json({ error: "Invalid credentials" });
+      // Direct password match
+      if (user.password !== password) {
+        return res.status(401).json({ error: "Invalid Password" });
+      }
 
       const token = generateToken(user);
 
@@ -83,6 +87,7 @@ router.post(
     }
   }
 );
+
 
 // ----------------------
 // Assign role/permissions to staff
