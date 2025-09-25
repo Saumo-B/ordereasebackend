@@ -48,7 +48,14 @@ app.use(unless([
     /^\/$/,
 ], auth_1.authenticate));
 // Global CORS
-app.use((0, cors_1.default)());
+// Allow specific frontend origin
+app.use((0, cors_1.default)({
+    origin: [
+        "https://6000-firebase-ordereasev4-1757936262348.cluster-nle52mxuvfhlkrzyrq6g2cwb52.cloudworkstations.dev",
+        "http://localhost:3000", // optional: for local testing
+    ],
+    credentials: true, // if you’re sending cookies or auth headers
+}));
 app.use(express_1.default.json());
 // app.use(authenticate);   // populate req.user
 // app.use(autoPermission); // enforce from central map
