@@ -30,7 +30,9 @@ const generateToken = (user) => {
 // ----------------------
 // Register User
 // ----------------------
-router.post("/register", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+router.post("/register", 
+// authenticate,
+(req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { name, email, password, role } = req.body;
         if (!req.user) {

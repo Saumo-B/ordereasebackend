@@ -22,7 +22,7 @@ const generateToken = (user: IUser) => {
 // ----------------------
 router.post(
   "/register",
-  authenticate,
+  // authenticate,
   async (req: Request & { user?: IUser }, res: Response, next: NextFunction) => {
     try {
       const { name, email, password, role } = req.body;
