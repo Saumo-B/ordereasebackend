@@ -17,7 +17,6 @@ const menu_1 = __importDefault(require("./routes/menu"));
 const ingredients_1 = __importDefault(require("./routes/ingredients"));
 const table_1 = __importDefault(require("./routes/table"));
 const userAuth_1 = __importDefault(require("./routes/userAuth"));
-const auth_1 = require("./middleware/auth");
 const ai_1 = __importDefault(require("./routes/ai"));
 const app = (0, express_1.default)();
 // Helmet and relaxed CSP
@@ -33,20 +32,25 @@ const unless = (pathPatterns, middleware) => {
     };
 };
 // Apply globally, but skip login/register/menu GET
-app.use(unless([
-    /^\/api\/login/,
-    /^\/api\/register/,
-    /^\/api\/menu/,
-    /^\/api\/kitchen/,
-    /^\/api\/myorder/,
-    /^\/api\/orderv2/,
-    /^\/api\/order/,
-    /^\/api\/ingredients/,
-    /^\/api\/docs/,
-    /^\/docs-assets/,
-    /^\/api\/swagger.json/,
-    /^\/$/,
-], auth_1.authenticate));
+// app.use(
+//   unless(
+//     [
+//       /^\/api\/login/,
+//       /^\/api\/register/,
+//       /^\/api\/menu/,
+//       /^\/api\/kitchen/,
+//       /^\/api\/myorder/,
+//       /^\/api\/orderv2/,
+//       /^\/api\/order/,
+//       /^\/api\/ingredients/,
+//       /^\/api\/docs/,
+//       /^\/docs-assets/,
+//       /^\/api\/swagger.json/,
+//       /^\/$/, 
+//     ],
+//     authenticate
+//   )
+// );
 // Global CORS
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
