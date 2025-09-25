@@ -16,7 +16,7 @@ const express_1 = __importDefault(require("express"));
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = require("../models/User");
-const auth_1 = require("../middleware/auth");
+// import { authenticate } from "../middleware/auth";
 const role_1 = require("../middleware/role");
 // import { PERMISSION } from "../lib/permission";
 const router = express_1.default.Router();
@@ -83,7 +83,9 @@ router.post("/login", (req, res, next) => __awaiter(void 0, void 0, void 0, func
 // ----------------------
 // Assign role/permissions to staff
 // ----------------------
-router.patch("/assign/:id", auth_1.authenticate, (0, role_1.requireRole)(["owner", "manager"]), (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+router.patch("/assign/:id", 
+// authenticate,
+(0, role_1.requireRole)(["owner", "manager"]), (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
         const { id } = req.params;
@@ -115,13 +117,17 @@ router.patch("/assign/:id", auth_1.authenticate, (0, role_1.requireRole)(["owner
 // ----------------------
 // Profile
 // ----------------------
-router.get("/profile", auth_1.authenticate, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+router.get("/profile", 
+// authenticate,
+(req, res) => __awaiter(void 0, void 0, void 0, function* () {
     res.json({ user: req.user });
 }));
 // ----------------------
 // Delete User
 // ----------------------
-router.delete("/:id", auth_1.authenticate, (0, role_1.requireRole)(["owner", "manager"]), (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+router.delete("/:id", 
+// authenticate,
+(0, role_1.requireRole)(["owner", "manager"]), (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
         const deleted = yield User_1.User.findByIdAndDelete(id);

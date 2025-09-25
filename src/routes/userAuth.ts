@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User, IUser } from "../models/User";
-import { authenticate } from "../middleware/auth";
+// import { authenticate } from "../middleware/auth";
 import { requireRole } from "../middleware/role";
 // import { PERMISSION } from "../lib/permission";
 
@@ -89,7 +89,7 @@ router.post(
 // ----------------------
 router.patch(
   "/assign/:id",
-  authenticate,
+  // authenticate,
   requireRole(["owner", "manager"]),
   async (req: Request & { user?: IUser }, res: Response, next: NextFunction) => {
     try {
@@ -128,7 +128,7 @@ router.patch(
 // ----------------------
 router.get(
   "/profile",
-  authenticate,
+  // authenticate,
   async (req: Request & { user?: IUser }, res: Response) => {
     res.json({ user: req.user });
   }
@@ -139,7 +139,7 @@ router.get(
 // ----------------------
 router.delete(
   "/:id",
-  authenticate,
+  // authenticate,
   requireRole(["owner","manager"]),
   async (req: Request & { user?: IUser }, res: Response, next: NextFunction) => {
     try {
