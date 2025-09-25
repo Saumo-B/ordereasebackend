@@ -14,7 +14,7 @@ import ingredients from "./routes/ingredients";
 import table from "./routes/table";
 import user from "./routes/userAuth";
 
-// import { authenticate } from "./middleware/auth";
+import { authenticate } from "./middleware/auth";
 import { autoPermission } from "./middleware/role";
 
 import aiRouter from "./routes/ai";
@@ -37,25 +37,25 @@ const unless = (pathPatterns: RegExp[], middleware: any) => {
 };
 
 // Apply globally, but skip login/register/menu GET
-// app.use(
-//   unless(
-//     [
-//       /^\/api\/login/,
-//       /^\/api\/register/,
-//       /^\/api\/menu/,
-//       /^\/api\/kitchen/,
-//       /^\/api\/myorder/,
-//       /^\/api\/orderv2/,
-//       /^\/api\/order/,
-//       /^\/api\/ingredients/,
-//       /^\/api\/docs/,
-//       /^\/docs-assets/,
-//       /^\/api\/swagger.json/,
-//       /^\/$/, 
-//     ],
-//     authenticate
-//   )
-// );
+app.use(
+  unless(
+    [
+      /^\/api\/login/,
+      /^\/api\/register/,
+      /^\/api\/menu/,
+      // /^\/api\/kitchen/,
+      /^\/api\/myorder/,
+      /^\/api\/orderv2/,
+      /^\/api\/order/,
+      // /^\/api\/ingredients/,
+      /^\/api\/docs/,
+      /^\/docs-assets/,
+      /^\/api\/swagger.json/,
+      /^\/$/, 
+    ],
+    authenticate
+  )
+);
 // Global CORS
 app.use(cors());
 app.use(express.json());
