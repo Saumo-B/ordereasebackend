@@ -34,8 +34,8 @@ const unless = (pathPatterns, middleware) => {
 };
 // Apply globally, but skip login/register/menu GET
 app.use(unless([
-    /^\/api\/auth\/login/,
-    /^\/api\/auth\/register/,
+    /^\/api\/login/,
+    /^\/api\/register/,
     /^\/api\/menu/,
     /^\/api\/kitchen/,
     /^\/api\/myorder/,

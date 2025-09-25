@@ -40,8 +40,8 @@ const unless = (pathPatterns: RegExp[], middleware: any) => {
 app.use(
   unless(
     [
-      /^\/api\/auth\/login/,
-      /^\/api\/auth\/register/,
+      /^\/api\/login/,
+      /^\/api\/register/,
       /^\/api\/menu/,
       /^\/api\/kitchen/,
       /^\/api\/myorder/,
