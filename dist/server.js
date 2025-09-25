@@ -43,7 +43,7 @@ app.use(unless([
     /^\/api\/order/,
     /^\/api\/ingredients/,
     /^\/api\/docs/,
-    /^\/api\/docs-assets/,
+    /^\/docs-assets/,
     /^\/api\/swagger.json/,
     /^\/$/,
 ], auth_1.authenticate));
