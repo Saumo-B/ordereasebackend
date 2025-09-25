@@ -35,14 +35,14 @@ router.post("/register",
 (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { name, email, password, role } = req.body;
-        if (!req.user) {
-            return res.status(401).json({ error: "Unauthorized" });
-        }
-        if (req.user.role === "manager" && role !== "staff") {
-            return res
-                .status(403)
-                .json({ error: "Manager can only create staff accounts" });
-        }
+        // if (!req.user) {
+        //   return res.status(401).json({ error: "Unauthorized" });
+        // }
+        // if (req.user.role === "manager" && role !== "staff") {
+        //   return res
+        //     .status(403)
+        //     .json({ error: "Manager can only create staff accounts" });
+        // }
         const existing = yield User_1.User.findOne({ email });
         if (existing) {
             return res.status(400).json({ error: "Email already registered" });
