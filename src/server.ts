@@ -42,25 +42,25 @@ app.use((req, res, next) => {
 });
 
 // Apply globally, but skip login/register/menu GET
-app.use(
-  unless(
-    [
-      /^\/api\/login/,
-      // /^\/api\/register/,
-      /^\/api\/menu/,
-      // /^\/api\/kitchen/,
-      /^\/api\/myorder/,
-      /^\/api\/orderv2/,
-      /^\/api\/order/,
-      // /^\/api\/ingredients/,
-      /^\/api\/docs/,
-      /^\/docs-assets/,
-      /^\/api\/swagger.json/,
-      /^\/$/, 
-    ],
-    authenticate
-  )
-);
+// app.use(
+//   unless(
+//     [
+//       /^\/api\/login/,
+//       // /^\/api\/register/,
+//       /^\/api\/menu/,
+//       // /^\/api\/kitchen/,
+//       /^\/api\/myorder/,
+//       /^\/api\/orderv2/,
+//       /^\/api\/order/,
+//       // /^\/api\/ingredients/,
+//       /^\/api\/docs/,
+//       /^\/docs-assets/,
+//       /^\/api\/swagger.json/,
+//       /^\/$/, 
+//     ],
+//     authenticate
+//   )
+// );
 // Global CORS
 // Allow specific frontend origin
 const allowedOrigins = process.env.FRONTEND_ORIGIN;
