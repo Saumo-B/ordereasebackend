@@ -28,14 +28,14 @@ app.use(
     contentSecurityPolicy: false
   })
 );
-const unless = (pathPatterns: RegExp[], middleware: any) => {
-  return (req: any, res: any, next: any) => {
-    if (pathPatterns.some(pattern => pattern.test(req.path))) {
-      return next(); // skip auth
-    }
-    return middleware(req, res, next);
-  };
-};
+// const unless = (pathPatterns: RegExp[], middleware: any) => {
+//   return (req: any, res: any, next: any) => {
+//     if (pathPatterns.some(pattern => pattern.test(req.path))) {
+//       return next(); // skip auth
+//     }
+//     return middleware(req, res, next);
+//   };
+// };
 app.use((req, res, next) => {
   console.log("Request Origin:", req.headers.origin);
   next();

@@ -7,6 +7,8 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 
+import { authenticate } from "../middleware/auth";
+
 import mongoose, { Types } from "mongoose";
 
 dayjs.extend(utc);
@@ -16,7 +18,7 @@ const router = Router();
 const TZ = "Asia/Kolkata"; // Force IST
 
 // Get all orders for today (IST)
-router.get("/today", async (req, res, next) => {
+router.get("/today", authenticate , async (req, res, next) => {
   try {
     const branchId = req.query.branch; // 👈 Branch ID passed in query
 
@@ -158,7 +160,7 @@ router.patch("/status/:orderId", async (req, res, next) => {
 });
 
 // 📊 GET /api/kitchen/dashboard-stats (IST-based)
-router.get("/dashboard-stats", async (req, res, next) => {
+router.get("/dashboard-stats",authenticate, async (req, res, next) => {
   try {
     const startOfToday = dayjs().tz(TZ).startOf("day").toDate();
     const endOfToday = dayjs().tz(TZ).endOf("day").toDate();
@@ -268,7 +270,7 @@ router.get("/dashboard-stats", async (req, res, next) => {
   }
 });
 
-router.get("/sales-report", async (req, res, next) => {
+router.get("/sales-report",authenticate, async (req, res, next) => {
   try {
     const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
 

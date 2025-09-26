@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { User, IUser } from "../models/User";
-// import { authenticate } from "../middleware/auth";
+import { authenticate } from "../middleware/auth";
 import { requireRole } from "../middleware/role";
 // import { PERMISSION } from "../lib/permission";
 
@@ -138,15 +138,31 @@ router.patch(
 );
 
 // ----------------------
-// Profile
+// Profiles
 // ----------------------
 router.get(
-  "/profile",
+  "/profiles",
   // authenticate,
-  async (req: Request & { user?: IUser }, res: Response) => {
-    res.json({ user: req.user });
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const branchId = req.query.branch as string;
+      if (!branchId) {
+        return res.status(400).json({ error: "Branch ID is required" });
+      }
+
+      // Get all users of this branch
+      const staff = await User.find({ branch: branchId })
+        .select("-password -__v") // hide sensitive fields
+        .populate("branch", "name PIN phone") // get branch details
+        .lean();
+
+      res.json({ staff });
+    } catch (e) {
+      next(e);
+    }
   }
 );
+
 
 // ----------------------
 // Delete User

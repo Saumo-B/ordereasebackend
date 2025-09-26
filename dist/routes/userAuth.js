@@ -15,7 +15,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = require("../models/User");
-// import { authenticate } from "../middleware/auth";
 const role_1 = require("../middleware/role");
 // import { PERMISSION } from "../lib/permission";
 const router = express_1.default.Router();
@@ -127,12 +126,26 @@ router.patch("/assign/:id",
     }
 }));
 // ----------------------
-// Profile
+// Profiles
 // ----------------------
-router.get("/profile", 
+router.get("/profiles", 
 // authenticate,
-(req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    res.json({ user: req.user });
+(req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const branchId = req.query.branch;
+        if (!branchId) {
+            return res.status(400).json({ error: "Branch ID is required" });
+        }
+        // Get all users of this branch
+        const staff = yield User_1.User.find({ branch: branchId })
+            .select("-password -__v") // hide sensitive fields
+            .populate("branch", "name PIN phone") // get branch details
+            .lean();
+        res.json({ staff });
+    }
+    catch (e) {
+        next(e);
+    }
 }));
 // ----------------------
 // Delete User

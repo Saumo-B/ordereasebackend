@@ -20,13 +20,14 @@ const Ingredients_1 = require("../models/Ingredients");
 const dayjs_1 = __importDefault(require("dayjs"));
 const utc_1 = __importDefault(require("dayjs/plugin/utc"));
 const timezone_1 = __importDefault(require("dayjs/plugin/timezone"));
+const auth_1 = require("../middleware/auth");
 const mongoose_1 = __importDefault(require("mongoose"));
 dayjs_1.default.extend(utc_1.default);
 dayjs_1.default.extend(timezone_1.default);
 const router = (0, express_1.Router)();
 const TZ = "Asia/Kolkata"; // Force IST
 // Get all orders for today (IST)
-router.get("/today", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+router.get("/today", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const branchId = req.query.branch; // 👈 Branch ID passed in query
         if (!branchId) {
@@ -153,7 +154,7 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
     }
 }));
 // 📊 GET /api/kitchen/dashboard-stats (IST-based)
-router.get("/dashboard-stats", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+router.get("/dashboard-stats", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
         const startOfToday = (0, dayjs_1.default)().tz(TZ).startOf("day").toDate();
@@ -250,7 +251,7 @@ router.get("/dashboard-stats", (req, res, next) => __awaiter(void 0, void 0, voi
         next(e);
     }
 }));
-router.get("/sales-report", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+router.get("/sales-report", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     try {
         const { startDate, endDate } = req.query;
