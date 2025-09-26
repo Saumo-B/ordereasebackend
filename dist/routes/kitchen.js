@@ -157,15 +157,21 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
 router.get("/dashboard-stats", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
+        const branchId = req.query.branch;
+        if (!branchId) {
+            return res.status(400).json({ error: "Branch ID is required in query param" });
+        }
         const startOfToday = (0, dayjs_1.default)().tz(TZ).startOf("day").toDate();
         const endOfToday = (0, dayjs_1.default)().tz(TZ).endOf("day").toDate();
         const startOfYesterday = (0, dayjs_1.default)().tz(TZ).subtract(1, "day").startOf("day").toDate();
         const endOfYesterday = (0, dayjs_1.default)().tz(TZ).subtract(1, "day").endOf("day").toDate();
-        // ---- Fetch orders
+        // ---- Fetch orders (branch scoped)
         const todayOrders = yield Order_1.Order.find({
+            branch: branchId,
             createdAt: { $gte: startOfToday, $lte: endOfToday },
         }).populate("lineItems.menuItem");
         const yesterdayOrders = yield Order_1.Order.find({
+            branch: branchId,
             createdAt: { $gte: startOfYesterday, $lte: endOfYesterday },
         });
         // ---- If no data
@@ -209,16 +215,16 @@ router.get("/dashboard-stats", auth_1.authenticate, (req, res, next) => __awaite
             cancelled: todayOrders.filter(o => o.status === "failed").length,
         };
         const averageOrderValue = orderCounts.total > 0 ? todaysSales / orderCounts.total : 0;
-        // ---- Low Stock Items (based on lowStockThreshold field)
-        const allIngredients = yield Ingredients_1.Ingredient.find().lean();
+        // ---- Low Stock Items (branch scoped)
+        const allIngredients = yield Ingredients_1.Ingredient.find({ branch: branchId }).lean();
         const lowStockItems = allIngredients
-            .filter(i => { var _a; return i.quantity <= ((_a = i.lowStockThreshold) !== null && _a !== void 0 ? _a : 5); }) // default threshold = 5
+            .filter(i => { var _a; return i.quantity <= ((_a = i.lowStockThreshold) !== null && _a !== void 0 ? _a : 5); })
             .map(i => ({
             _id: i._id,
             name: i.name,
             quantity: i.quantity,
             unit: i.unit,
-            lowStockWarning: true
+            lowStockWarning: true,
         }));
         // ---- Repeat Customer Count
         const customerOrderMap = {};

@@ -160,20 +160,27 @@ router.patch("/status/:orderId", async (req, res, next) => {
 });
 
 // 📊 GET /api/kitchen/dashboard-stats (IST-based)
-router.get("/dashboard-stats",authenticate, async (req, res, next) => {
+router.get("/dashboard-stats", authenticate, async (req, res, next) => {
   try {
+    const branchId = req.query.branch as string;
+    if (!branchId) {
+      return res.status(400).json({ error: "Branch ID is required in query param" });
+    }
+
     const startOfToday = dayjs().tz(TZ).startOf("day").toDate();
     const endOfToday = dayjs().tz(TZ).endOf("day").toDate();
 
     const startOfYesterday = dayjs().tz(TZ).subtract(1, "day").startOf("day").toDate();
     const endOfYesterday = dayjs().tz(TZ).subtract(1, "day").endOf("day").toDate();
 
-    // ---- Fetch orders
+    // ---- Fetch orders (branch scoped)
     const todayOrders = await Order.find({
+      branch: branchId,
       createdAt: { $gte: startOfToday, $lte: endOfToday },
     }).populate("lineItems.menuItem");
 
     const yesterdayOrders = await Order.find({
+      branch: branchId,
       createdAt: { $gte: startOfYesterday, $lte: endOfYesterday },
     });
 
@@ -198,7 +205,7 @@ router.get("/dashboard-stats",authenticate, async (req, res, next) => {
     // ---- Helpers
     const calcRevenue = (orders: any[]) =>
       orders.filter(o => ["paid", "done"].includes(o.status))
-            .reduce((sum, o) => sum + (o.amount || 0), 0);
+        .reduce((sum, o) => sum + (o.amount || 0), 0);
 
     const groupByHour = (orders: any[]) => {
       const salesByHourMap: Record<string, number> = {};
@@ -225,16 +232,16 @@ router.get("/dashboard-stats",authenticate, async (req, res, next) => {
     const averageOrderValue =
       orderCounts.total > 0 ? todaysSales / orderCounts.total : 0;
 
-    // ---- Low Stock Items (based on lowStockThreshold field)
-    const allIngredients = await Ingredient.find().lean();
+    // ---- Low Stock Items (branch scoped)
+    const allIngredients = await Ingredient.find({ branch: branchId }).lean();
     const lowStockItems = allIngredients
-      .filter(i => i.quantity <= (i.lowStockThreshold ?? 5)) // default threshold = 5
+      .filter(i => i.quantity <= (i.lowStockThreshold ?? 5))
       .map(i => ({
         _id: i._id,
         name: i.name,
         quantity: i.quantity,
         unit: i.unit,
-        lowStockWarning: true
+        lowStockWarning: true,
       }));
 
     // ---- Repeat Customer Count
@@ -269,6 +276,7 @@ router.get("/dashboard-stats",authenticate, async (req, res, next) => {
     next(e);
   }
 });
+
 
 router.get("/sales-report",authenticate, async (req, res, next) => {
   try {
