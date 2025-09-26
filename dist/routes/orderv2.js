@@ -24,7 +24,7 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
     const session = yield mongoose_1.default.startSession();
     session.startTransaction();
     try {
-        const { items = [], customer } = req.body || {};
+        const { items = [], customer, branch } = req.body || {};
         // Calculate total
         const amount = items.reduce((sum, it) => sum + it.price * it.status.active, 0);
         const orderToken = yield (0, token_1.makeToken)();
@@ -35,6 +35,7 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             currency: "INR",
             lineItems: items,
             customer,
+            branch,
             orderToken,
             paymentMethod: "counter",
         });

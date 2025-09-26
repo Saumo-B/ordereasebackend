@@ -13,7 +13,7 @@ router.post("/", async (req, res, next) => {
   session.startTransaction();
 
   try {
-    const { items = [], customer } = req.body || {};
+    const { items = [], customer,branch } = req.body || {};
 
     // Calculate total
     const amount = items.reduce((sum: number, it: any) => sum + it.price * it.status.active, 0);
@@ -26,6 +26,7 @@ router.post("/", async (req, res, next) => {
       currency: "INR",
       lineItems: items,
       customer,
+      branch,
       orderToken,
       paymentMethod: "counter",
     }) as OrderDoc;
