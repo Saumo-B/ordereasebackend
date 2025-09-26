@@ -15,7 +15,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const mongoose_1 = __importDefault(require("mongoose"));
 const Menu_1 = require("../models/Menu");
-const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 /**
  * GET /api/menu
@@ -84,17 +83,15 @@ router.get("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, functio
 //   }
 // });
 //add bulk menu item
-router.post("/", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { menuItems } = req.body;
+        const branchId = req.query.branch;
+        if (!branchId) {
+            return res.status(400).json({ error: "Branch ID is required in query param" });
+        }
         if (!Array.isArray(menuItems) || menuItems.length === 0) {
             return res.status(400).json({ error: "menuItems array is required" });
-        }
-        // 🔑 Branch comes from the logged-in user (staff/admin)
-        const branchId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.branch;
-        if (!branchId) {
-            return res.status(403).json({ error: "User is not linked to a branch" });
         }
         // Validate each menu item
         for (const item of menuItems) {
@@ -111,7 +108,7 @@ router.post("/", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void
                     }
                 }
             }
-            // Force-assign branch
+            // Force-assign branch from query
             item.branch = branchId;
         }
         // Insert many at once

@@ -82,18 +82,17 @@ router.get("/:id", async (req, res, next) => {
 // });
 
 //add bulk menu item
-router.post("/", authenticate, async (req, res, next) => {
+router.post("/", async (req, res, next) => {
   try {
     const { menuItems } = req.body;
+    const branchId = req.query.branch as string;
+
+    if (!branchId) {
+      return res.status(400).json({ error: "Branch ID is required in query param" });
+    }
 
     if (!Array.isArray(menuItems) || menuItems.length === 0) {
       return res.status(400).json({ error: "menuItems array is required" });
-    }
-
-    // 🔑 Branch comes from the logged-in user (staff/admin)
-    const branchId = req.user?.branch; 
-    if (!branchId) {
-      return res.status(403).json({ error: "User is not linked to a branch" });
     }
 
     // Validate each menu item
@@ -113,7 +112,7 @@ router.post("/", authenticate, async (req, res, next) => {
         }
       }
 
-      // Force-assign branch
+      // Force-assign branch from query
       item.branch = branchId;
     }
 
@@ -142,6 +141,7 @@ router.post("/", authenticate, async (req, res, next) => {
     return res.status(500).json({ error: "Internal server error" });
   }
 });
+
 
 /**************************
  * PATCH /api/menu/:id
