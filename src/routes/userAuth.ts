@@ -53,7 +53,7 @@ router.post(
 
       await user.save();
 
-      res.status(201).json({ message: "User registered", user });
+      res.status(201).json({ message: "User registered" });
     } catch (e) {
       next(e);
     }
@@ -78,6 +78,15 @@ router.post(
       if (user.password !== password) {
         return res.status(401).json({ error: "Invalid Password" });
       }
+      const userResponse = {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        permissions: user.permissions,
+        branch: user.branch,
+        branchName: (user.branch as any)?.name || null,
+      };
 
       const token = generateToken(user);
 

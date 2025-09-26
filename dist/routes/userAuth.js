@@ -54,7 +54,7 @@ router.post("/register",
             role: role || "staff",
         });
         yield user.save();
-        res.status(201).json({ message: "User registered", user });
+        res.status(201).json({ message: "User registered" });
     }
     catch (e) {
         next(e);
@@ -64,6 +64,7 @@ router.post("/register",
 // Login
 // ----------------------
 router.post("/login", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const { email, password } = req.body;
         const user = yield User_1.User.findOne({ email });
@@ -74,6 +75,15 @@ router.post("/login", (req, res, next) => __awaiter(void 0, void 0, void 0, func
         if (user.password !== password) {
             return res.status(401).json({ error: "Invalid Password" });
         }
+        const userResponse = {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            permissions: user.permissions,
+            branch: user.branch,
+            branchName: ((_a = user.branch) === null || _a === void 0 ? void 0 : _a.name) || null,
+        };
         const token = generateToken(user);
         res.json({ token, user });
     }
