@@ -42,8 +42,8 @@ const UserSchema = new mongoose_1.Schema({
     branch: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "Branch", required: true },
     role: {
         type: String,
-        enum: ["owner", "manager", "staff"],
-        default: "staff",
+        enum: ["owner", "manager", "chef", "waiter"],
+        default: "waiter",
     },
     permissions: {
         type: [String],

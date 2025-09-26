@@ -1,7 +1,7 @@
 import mongoose, { Types,Document, Schema } from "mongoose";
 import bcrypt from "bcryptjs";
 
-export type UserRole = "owner" | "manager" | "staff";
+export type UserRole = "owner" | "manager" | "chef" | "waiter";
 
 export interface IUser extends Document {
   name: string;
@@ -21,8 +21,8 @@ const UserSchema = new Schema<IUser>(
     branch: { type: mongoose.Schema.Types.ObjectId, ref: "Branch", required: true },
     role: {
       type: String,
-      enum: ["owner", "manager", "staff"],
-      default: "staff",
+      enum: ["owner", "manager", "chef", "waiter"],
+      default: "waiter",
     },
     permissions: {
       type: [String],

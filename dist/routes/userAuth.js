@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
 const User_1 = require("../models/User");
+const auth_1 = require("../middleware/auth");
 const role_1 = require("../middleware/role");
 // import { PERMISSION } from "../lib/permission";
 const router = express_1.default.Router();
@@ -28,32 +29,39 @@ const generateToken = (user) => {
 // ----------------------
 // Register User
 // ----------------------
-router.post("/register", 
-// authenticate,
-(req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+router.post("/register", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { name, email, password, role } = req.body;
-        // if (!req.user) {
-        //   return res.status(401).json({ error: "Unauthorized" });
-        // }
-        // if (req.user.role === "manager" && role !== "staff") {
-        //   return res
-        //     .status(403)
-        //     .json({ error: "Manager can only create staff accounts" });
-        // }
+        const branchId = req.query.branch;
+        if (!branchId) {
+            return res.status(400).json({ error: "Branch ID is required in query param" });
+        }
+        // Check if email already exists
         const existing = yield User_1.User.findOne({ email });
         if (existing) {
             return res.status(400).json({ error: "Email already registered" });
         }
+        // TODO: Add hashing in production
         // const hashedPassword = await bcrypt.hash(password, 10);
+        // Assign branch explicitly
         const user = new User_1.User({
             name,
             email,
             password,
             role: role || "staff",
+            branch: branchId,
         });
         yield user.save();
-        res.status(201).json({ message: "User registered" });
+        res.status(201).json({
+            message: "User registered",
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                branch: user.branch,
+            },
+        });
     }
     catch (e) {
         next(e);
@@ -94,37 +102,35 @@ router.post("/login", (req, res, next) => __awaiter(void 0, void 0, void 0, func
 // ----------------------
 // Assign role/permissions to staff
 // ----------------------
-router.patch("/assign/:id", 
-// authenticate,
-(0, role_1.requireRole)(["owner", "manager"]), (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
-    try {
-        const { id } = req.params;
-        const { role, permissions } = req.body;
-        const staff = yield User_1.User.findById(id);
-        if (!staff)
-            return res.status(404).json({ error: "User not found" });
-        if (staff.role !== "staff") {
-            return res
-                .status(400)
-                .json({ error: "Only staff can be assigned roles/permissions" });
-        }
-        if (((_a = req.user) === null || _a === void 0 ? void 0 : _a.role) === "manager" && role && role !== "staff") {
-            return res
-                .status(403)
-                .json({ error: "Manager cannot assign non-staff roles" });
-        }
-        if (role)
-            staff.role = role;
-        if (Array.isArray(permissions))
-            staff.permissions = permissions;
-        yield staff.save();
-        res.json({ message: "Staff updated", staff });
-    }
-    catch (e) {
-        next(e);
-    }
-}));
+// router.patch(
+//   "/assign/:id",
+//   // authenticate,
+//   requireRole(["owner", "manager"]),
+//   async (req: Request & { user?: IUser }, res: Response, next: NextFunction) => {
+//     try {
+//       const { id } = req.params;
+//       const { role, permissions } = req.body;
+//       const staff = await User.findById(id);
+//       if (!staff) return res.status(404).json({ error: "User not found" });
+//       if (staff.role !== "staff") {
+//         return res
+//           .status(400)
+//           .json({ error: "Only staff can be assigned roles/permissions" });
+//       }
+//       if (req.user?.role === "manager" && role && role !== "staff") {
+//         return res
+//           .status(403)
+//           .json({ error: "Manager cannot assign non-staff roles" });
+//       }
+//       if (role) staff.role = role;
+//       if (Array.isArray(permissions)) staff.permissions = permissions;
+//       await staff.save();
+//       res.json({ message: "Staff updated", staff });
+//     } catch (e) {
+//       next(e);
+//     }
+//   }
+// );
 // ----------------------
 // Profiles
 // ----------------------
