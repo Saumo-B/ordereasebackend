@@ -31,12 +31,13 @@ const router = Router();
 // });
 
 // Bulk add ingredients
-router.post("/", async (req, res, next) => {
+router.post("/:branchId", async (req, res, next) => {
   try {
-    const { ingredients, branch } = req.body;
+    const { branchId } = req.params;
+    const { ingredients } = req.body;
 
-    if (!branch) {
-      return res.status(400).json({ error: "Branch ID is required" });
+    if (!branchId) {
+      return res.status(400).json({ error: "Branch ID is required in URL param" });
     }
 
     if (!Array.isArray(ingredients) || ingredients.length === 0) {
@@ -53,17 +54,17 @@ router.post("/", async (req, res, next) => {
       }
     }
 
-    // Add branch to each ingredient
-    const ingredientsWithBranch = ingredients.map(ing => ({
+    // Add branch from param to each ingredient
+    const ingredientsWithBranch = ingredients.map((ing) => ({
       ...ing,
-      branch, // assign branch from frontend
+      branch: branchId,
     }));
 
     const result = await Ingredient.insertMany(ingredientsWithBranch, { ordered: false });
 
     res.status(201).json({
       message: "Ingredients created successfully",
-      // ingredients: result,
+      count: result.length,
     });
   } catch (e: any) {
     if (e.code === 11000) {
@@ -72,7 +73,6 @@ router.post("/", async (req, res, next) => {
     next(e);
   }
 });
-
 
 // Get all ingredients
 router.get("/", async (req, res, next) => {

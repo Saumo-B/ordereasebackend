@@ -38,11 +38,12 @@ const router = (0, express_1.Router)();
 //   }
 // });
 // Bulk add ingredients
-router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+router.post("/:branchId", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { ingredients, branch } = req.body;
-        if (!branch) {
-            return res.status(400).json({ error: "Branch ID is required" });
+        const { branchId } = req.params;
+        const { ingredients } = req.body;
+        if (!branchId) {
+            return res.status(400).json({ error: "Branch ID is required in URL param" });
         }
         if (!Array.isArray(ingredients) || ingredients.length === 0) {
             return res.status(400).json({ error: "ingredients array is required" });
@@ -56,12 +57,12 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
                 return res.status(400).json({ error: "lowStockThreshold must be >= 0" });
             }
         }
-        // Add branch to each ingredient
-        const ingredientsWithBranch = ingredients.map(ing => (Object.assign(Object.assign({}, ing), { branch })));
+        // Add branch from param to each ingredient
+        const ingredientsWithBranch = ingredients.map((ing) => (Object.assign(Object.assign({}, ing), { branch: branchId })));
         const result = yield Ingredients_1.Ingredient.insertMany(ingredientsWithBranch, { ordered: false });
         res.status(201).json({
             message: "Ingredients created successfully",
-            // ingredients: result,
+            count: result.length,
         });
     }
     catch (e) {
