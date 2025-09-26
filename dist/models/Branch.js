@@ -9,6 +9,7 @@ const BranchSchema = new mongoose_1.default.Schema({
     name: { type: String, required: true },
     PIN: String,
     phone: String,
+    address: String,
 });
 exports.Branch = mongoose_1.default.model("Branch", BranchSchema);
 //# sourceMappingURL=Branch.js.map
