@@ -67,7 +67,8 @@ router.post("/login", (req, res, next) => __awaiter(void 0, void 0, void 0, func
     var _a;
     try {
         const { email, password } = req.body;
-        const user = yield User_1.User.findOne({ email });
+        const user = yield User_1.User.findOne({ email }).populate("branch", "name");
+        // const user = await User.findOne({ email });
         if (!user) {
             return res.status(401).json({ error: "Invalid Email" });
         }
@@ -85,7 +86,7 @@ router.post("/login", (req, res, next) => __awaiter(void 0, void 0, void 0, func
             branchName: ((_a = user.branch) === null || _a === void 0 ? void 0 : _a.name) || null,
         };
         const token = generateToken(user);
-        res.json({ token, user });
+        res.json({ token, userResponse });
     }
     catch (e) {
         next(e);

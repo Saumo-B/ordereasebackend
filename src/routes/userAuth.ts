@@ -68,8 +68,8 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { email, password } = req.body;
-
-      const user = await User.findOne({ email });
+      const user = await User.findOne({ email }).populate("branch", "name");
+      // const user = await User.findOne({ email });
       if (!user) {
         return res.status(401).json({ error: "Invalid Email" });
       }
@@ -90,7 +90,7 @@ router.post(
 
       const token = generateToken(user);
 
-      res.json({ token, user });
+      res.json({ token, userResponse });
     } catch (e) {
       next(e);
     }
