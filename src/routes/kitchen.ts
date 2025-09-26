@@ -18,17 +18,24 @@ const TZ = "Asia/Kolkata"; // Force IST
 // Get all orders for today (IST)
 router.get("/today", async (req, res, next) => {
   try {
+    const branchId = req.query.branch; // 👈 Branch ID passed in query
+
+    if (!branchId) {
+      return res.status(400).json({ message: "Branch ID is required" });
+    }
+
     const startOfDay = dayjs().tz(TZ).startOf("day").toDate();
     const endOfDay = dayjs().tz(TZ).endOf("day").toDate();
 
     const orders = await Order.find({
+      branch: branchId, // 👈 filter by branch
       createdAt: { $gte: startOfDay, $lte: endOfDay },
     })
       .sort({ createdAt: -1 })
       .populate("lineItems.menuItem", "name") // only fetch menuItem name
       .lean();
 
-    // Transform: replace menuItem with its name
+    // 🔹 Transform: flatten menuItem into name
     const transformed = orders.map(order => ({
       ...order,
       lineItems: order.lineItems.map((li: any) => ({
