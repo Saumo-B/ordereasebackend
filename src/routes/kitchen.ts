@@ -277,7 +277,6 @@ router.get("/dashboard-stats", authenticate, async (req, res, next) => {
   }
 });
 
-
 router.get("/sales-report",authenticate, async (req, res, next) => {
   try {
     const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
