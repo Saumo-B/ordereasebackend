@@ -140,7 +140,8 @@ const OrderSchema = new mongoose.Schema({
     enum: ["paymentgateway", "counter"], 
     required: true,
     immutable: true 
-  }
+  },
+  branch: { type: mongoose.Schema.Types.ObjectId, ref: "Branch", required: true },
 }, { timestamps: true });
 
 // --- Export types and model ---

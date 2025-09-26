@@ -98,7 +98,8 @@ const OrderSchema = new mongoose_1.default.Schema({
         enum: ["paymentgateway", "counter"],
         required: true,
         immutable: true
-    }
+    },
+    branch: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "Branch", required: true },
 }, { timestamps: true });
 exports.Order = mongoose_1.default.model("Order", OrderSchema);
 //# sourceMappingURL=Order.js.map

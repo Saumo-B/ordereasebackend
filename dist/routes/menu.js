@@ -23,10 +23,13 @@ const router = (0, express_1.Router)();
  */
 router.get("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        // Fetch all menu items but exclude recipe, createdAt, updatedAt
-        const items = yield Menu_1.MenuItem.find()
+        const branchId = req.query.branch; // 👈 from query param (for customer API)
+        if (!branchId) {
+            return res.status(400).json({ message: "Branch ID is required" });
+        }
+        const items = yield Menu_1.MenuItem.find({ branch: branchId })
             .sort({ createdAt: -1 })
-            .select("-recipe -createdAt -updatedAt") // exclude these fields
+            .select("-recipe -createdAt -updatedAt") // exclude recipe + timestamps
             .lean();
         res.json(items);
     }
@@ -82,10 +85,16 @@ router.get("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, functio
 // });
 //add bulk menu item
 router.post("/", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const { menuItems } = req.body;
         if (!Array.isArray(menuItems) || menuItems.length === 0) {
             return res.status(400).json({ error: "menuItems array is required" });
+        }
+        // 🔑 Branch comes from the logged-in user (staff/admin)
+        const branchId = (_a = req.user) === null || _a === void 0 ? void 0 : _a.branch;
+        if (!branchId) {
+            return res.status(403).json({ error: "User is not linked to a branch" });
         }
         // Validate each menu item
         for (const item of menuItems) {
@@ -102,16 +111,17 @@ router.post("/", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void
                     }
                 }
             }
+            // Force-assign branch
+            item.branch = branchId;
         }
         // Insert many at once
         const result = yield Menu_1.MenuItem.insertMany(menuItems, { ordered: false });
         return res.status(201).json({
             message: "Menu items created successfully",
-            // items: result,
+            count: result.length,
         });
     }
     catch (e) {
-        // 🔹 Print full error in server logs
         console.error("MenuItem creation failed:", e);
         if (e.code === 11000) {
             return res.status(400).json({ error: "Duplicate name detected" });
@@ -127,10 +137,10 @@ router.post("/", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void
         return res.status(500).json({ error: "Internal server error" });
     }
 }));
-/**
+/**************************
  * PATCH /api/menu/:id
  * Update menu item
- */
+ **************************/
 router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
@@ -146,10 +156,10 @@ router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         next(e);
     }
 }));
-/**
+/************************
  * DELETE /api/menu/:id
  * Delete menu item
- */
+ *************************/
 router.delete("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;

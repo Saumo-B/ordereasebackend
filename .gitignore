@@ -27,6 +27,7 @@
 /.idea
 /.vercel
 fix_db.js
+add_db.js
 
 # debug
 npm-debug.log*

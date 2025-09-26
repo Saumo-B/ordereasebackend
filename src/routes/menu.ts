@@ -11,10 +11,15 @@ const router = Router();
  */
 router.get("/", async (req, res, next) => {
   try {
-    // Fetch all menu items but exclude recipe, createdAt, updatedAt
-    const items = await MenuItem.find()
+    const branchId = req.query.branch; // 👈 from query param (for customer API)
+
+    if (!branchId) {
+      return res.status(400).json({ message: "Branch ID is required" });
+    }
+
+    const items = await MenuItem.find({ branch: branchId })
       .sort({ createdAt: -1 })
-      .select("-recipe -createdAt -updatedAt") // exclude these fields
+      .select("-recipe -createdAt -updatedAt") // exclude recipe + timestamps
       .lean();
 
     res.json(items);
@@ -79,12 +84,18 @@ router.get("/:id", async (req, res, next) => {
 // });
 
 //add bulk menu item
-router.post("/", authenticate ,async (req, res, next) => {
+router.post("/", authenticate, async (req, res, next) => {
   try {
     const { menuItems } = req.body;
 
     if (!Array.isArray(menuItems) || menuItems.length === 0) {
       return res.status(400).json({ error: "menuItems array is required" });
+    }
+
+    // 🔑 Branch comes from the logged-in user (staff/admin)
+    const branchId = req.user?.branch; 
+    if (!branchId) {
+      return res.status(403).json({ error: "User is not linked to a branch" });
     }
 
     // Validate each menu item
@@ -103,6 +114,9 @@ router.post("/", authenticate ,async (req, res, next) => {
           }
         }
       }
+
+      // Force-assign branch
+      item.branch = branchId;
     }
 
     // Insert many at once
@@ -110,10 +124,9 @@ router.post("/", authenticate ,async (req, res, next) => {
 
     return res.status(201).json({
       message: "Menu items created successfully",
-      // items: result,
+      count: result.length,
     });
   } catch (e: any) {
-    // 🔹 Print full error in server logs
     console.error("MenuItem creation failed:", e);
 
     if (e.code === 11000) {
@@ -132,10 +145,10 @@ router.post("/", authenticate ,async (req, res, next) => {
   }
 });
 
-/**
+/**************************
  * PATCH /api/menu/:id
  * Update menu item
- */
+ **************************/
 router.patch("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -153,10 +166,10 @@ router.patch("/:id", async (req, res, next) => {
   }
 });
 
-/**
+/************************
  * DELETE /api/menu/:id
  * Delete menu item
- */
+ *************************/
 router.delete("/:id", async (req, res, next) => {
   try {
     const { id } = req.params;
