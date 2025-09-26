@@ -32,6 +32,10 @@ const unless = (pathPatterns, middleware) => {
         return middleware(req, res, next);
     };
 };
+app.use((req, res, next) => {
+    console.log("Request Origin:", req.headers.origin);
+    next();
+});
 // Apply globally, but skip login/register/menu GET
 app.use(unless([
     /^\/api\/login/,
@@ -50,6 +54,7 @@ app.use(unless([
 // Global CORS
 // Allow specific frontend origin
 const allowedOrigins = [process.env.FRONTEND_ORIGIN];
+console.log(allowedOrigins);
 app.use((0, cors_1.default)({
     origin: (origin, callback) => {
         if (!origin || allowedOrigins.includes(origin)) {
@@ -92,6 +97,7 @@ mongoose_1.default
     console.log(`Mongo Connected`);
     app.listen(process.env.PORT, () => {
         console.log(`Server listening on port ${process.env.PORT}`);
+        console.log(allowedOrigins);
     });
 })
     .catch(err => console.log("DB connection failed", err));

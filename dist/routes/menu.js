@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const mongoose_1 = __importDefault(require("mongoose"));
 const Menu_1 = require("../models/Menu");
+const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 /**
  * GET /api/menu
@@ -80,7 +81,7 @@ router.get("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, functio
 //   }
 // });
 //add bulk menu item
-router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+router.post("/", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { menuItems } = req.body;
         if (!Array.isArray(menuItems) || menuItems.length === 0) {

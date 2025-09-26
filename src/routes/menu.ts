@@ -1,6 +1,7 @@
 import { Router } from "express";
 import mongoose from "mongoose";
 import { MenuItem } from "../models/Menu";
+import { authenticate } from "../middleware/auth";
 
 const router = Router();
 
@@ -78,7 +79,7 @@ router.get("/:id", async (req, res, next) => {
 // });
 
 //add bulk menu item
-router.post("/", async (req, res, next) => {
+router.post("/", authenticate ,async (req, res, next) => {
   try {
     const { menuItems } = req.body;
 
