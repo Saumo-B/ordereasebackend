@@ -31,13 +31,13 @@ const router = Router();
 // });
 
 // Bulk add ingredients
-router.post("/:branchId", async (req, res, next) => {
+router.post("/", async (req, res, next) => {
   try {
-    const { branchId } = req.params;
+    const branchId = req.query.branch as string;
     const { ingredients } = req.body;
 
     if (!branchId) {
-      return res.status(400).json({ error: "Branch ID is required in URL param" });
+      return res.status(400).json({ error: "Branch ID is required in query param" });
     }
 
     if (!Array.isArray(ingredients) || ingredients.length === 0) {
@@ -54,7 +54,7 @@ router.post("/:branchId", async (req, res, next) => {
       }
     }
 
-    // Add branch from param to each ingredient
+    // Add branch from query to each ingredient
     const ingredientsWithBranch = ingredients.map((ing) => ({
       ...ing,
       branch: branchId,
