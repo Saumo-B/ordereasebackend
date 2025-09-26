@@ -11,12 +11,10 @@ const router = Router();
  */
 router.get("/", async (req, res, next) => {
   try {
-    const branchId = req.query.branch; // 👈 from query param (for customer API)
-
+    const branchId = req.query.branch; 
     if (!branchId) {
       return res.status(400).json({ message: "Branch ID is required" });
     }
-
     const items = await MenuItem.find({ branch: branchId })
       .sort({ createdAt: -1 })
       .select("-recipe -createdAt -updatedAt") // exclude recipe + timestamps

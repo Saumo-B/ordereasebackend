@@ -23,7 +23,7 @@ const router = (0, express_1.Router)();
  */
 router.get("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const branchId = req.query.branch; // 👈 from query param (for customer API)
+        const branchId = req.query.branch;
         if (!branchId) {
             return res.status(400).json({ message: "Branch ID is required" });
         }

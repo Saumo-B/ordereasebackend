@@ -40,7 +40,10 @@ const router = (0, express_1.Router)();
 // Bulk add ingredients
 router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { ingredients } = req.body;
+        const { ingredients, branch } = req.body;
+        if (!branch) {
+            return res.status(400).json({ error: "Branch ID is required" });
+        }
         if (!Array.isArray(ingredients) || ingredients.length === 0) {
             return res.status(400).json({ error: "ingredients array is required" });
         }
@@ -53,7 +56,9 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
                 return res.status(400).json({ error: "lowStockThreshold must be >= 0" });
             }
         }
-        const result = yield Ingredients_1.Ingredient.insertMany(ingredients, { ordered: false });
+        // Add branch to each ingredient
+        const ingredientsWithBranch = ingredients.map(ing => (Object.assign(Object.assign({}, ing), { branch })));
+        const result = yield Ingredients_1.Ingredient.insertMany(ingredientsWithBranch, { ordered: false });
         res.status(201).json({
             message: "Ingredients created successfully",
             // ingredients: result,
@@ -69,7 +74,12 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
 // Get all ingredients
 router.get("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const ingredients = yield Ingredients_1.Ingredient.find()
+        const branchId = req.query.branch;
+        if (!branchId) {
+            return res.status(400).json({ error: "Branch ID is required" });
+        }
+        // Fetch ingredients for this branch
+        const ingredients = yield Ingredients_1.Ingredient.find({ branch: branchId })
             .select("-createdAt -updatedAt")
             .lean();
         // Add low-stock warning

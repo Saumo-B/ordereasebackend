@@ -33,7 +33,11 @@ const router = Router();
 // Bulk add ingredients
 router.post("/", async (req, res, next) => {
   try {
-    const { ingredients } = req.body;
+    const { ingredients, branch } = req.body;
+
+    if (!branch) {
+      return res.status(400).json({ error: "Branch ID is required" });
+    }
 
     if (!Array.isArray(ingredients) || ingredients.length === 0) {
       return res.status(400).json({ error: "ingredients array is required" });
@@ -49,7 +53,13 @@ router.post("/", async (req, res, next) => {
       }
     }
 
-    const result = await Ingredient.insertMany(ingredients, { ordered: false });
+    // Add branch to each ingredient
+    const ingredientsWithBranch = ingredients.map(ing => ({
+      ...ing,
+      branch, // assign branch from frontend
+    }));
+
+    const result = await Ingredient.insertMany(ingredientsWithBranch, { ordered: false });
 
     res.status(201).json({
       message: "Ingredients created successfully",
@@ -63,10 +73,18 @@ router.post("/", async (req, res, next) => {
   }
 });
 
+
 // Get all ingredients
 router.get("/", async (req, res, next) => {
   try {
-    const ingredients = await Ingredient.find()
+    const branchId = req.query.branch as string;
+
+    if (!branchId) {
+      return res.status(400).json({ error: "Branch ID is required" });
+    }
+
+    // Fetch ingredients for this branch
+    const ingredients = await Ingredient.find({ branch: branchId })
       .select("-createdAt -updatedAt")
       .lean();
 

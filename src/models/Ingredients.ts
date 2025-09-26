@@ -4,6 +4,7 @@ const IngredientSchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true },
   unit: { type: String, required: true }, 
   quantity: { type: Number, required: true, default: 0 }, // actual stock
+  branch: { type: mongoose.Schema.Types.ObjectId, ref: "Branch", required: true, immutable: true  }, // 🔹 branch required
   reservedQuantity: { type: Number, default: 0 }, // reserved for unpaid orders
   lowStockThreshold: { type: Number, default: 0 }, // user-defined warning threshold
 }, { timestamps: true });

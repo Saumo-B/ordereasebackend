@@ -40,7 +40,7 @@ const OrderSchema = new mongoose_1.default.Schema({
         required: true,
         immutable: true
     },
-    branch: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "Branch", required: true }, // 🔹 branch required
+    branch: { type: mongoose_1.default.Schema.Types.ObjectId, ref: "Branch", required: true, immutable: true }, // 🔹 branch required
 }, { timestamps: true });
 // Enable virtuals for OrderSchema as well
 OrderSchema.set('toJSON', { virtuals: true });
