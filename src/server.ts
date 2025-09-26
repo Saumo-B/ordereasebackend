@@ -41,7 +41,7 @@ app.use(
   unless(
     [
       /^\/api\/login/,
-      /^\/api\/register/,
+      // /^\/api\/register/,
       /^\/api\/menu/,
       // /^\/api\/kitchen/,
       /^\/api\/myorder/,
@@ -58,15 +58,23 @@ app.use(
 );
 // Global CORS
 // Allow specific frontend origin
+const allowedOrigins = [process.env.FRONTEND_ORIGIN];
+
 app.use(
   cors({
-    origin: [
-      "https://6000-firebase-ordereasev4-1757936262348.cluster-nle52mxuvfhlkrzyrq6g2cwb52.cloudworkstations.dev",
-      "http://localhost:3000", // optional: for local testing
-    ],
-    credentials: true, // if you’re sending cookies or auth headers
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: true,
   })
-);app.use(express.json());
+);
+app.use(express.json());
 
 // app.use(authenticate);   // populate req.user
 // app.use(autoPermission); // enforce from central map
