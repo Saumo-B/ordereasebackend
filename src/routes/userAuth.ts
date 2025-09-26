@@ -84,7 +84,7 @@ router.post(
         email: user.email,
         role: user.role,
         permissions: user.permissions,
-        branch: user.branch,
+        branchid: (user.branch as any)?._id || null,
         branchName: (user.branch as any)?.name || null,
       };
 

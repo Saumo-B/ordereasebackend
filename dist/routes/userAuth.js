@@ -64,7 +64,7 @@ router.post("/register",
 // Login
 // ----------------------
 router.post("/login", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a;
+    var _a, _b;
     try {
         const { email, password } = req.body;
         const user = yield User_1.User.findOne({ email }).populate("branch", "name");
@@ -82,8 +82,8 @@ router.post("/login", (req, res, next) => __awaiter(void 0, void 0, void 0, func
             email: user.email,
             role: user.role,
             permissions: user.permissions,
-            branch: user.branch,
-            branchName: ((_a = user.branch) === null || _a === void 0 ? void 0 : _a.name) || null,
+            branchid: ((_a = user.branch) === null || _a === void 0 ? void 0 : _a._id) || null,
+            branchName: ((_b = user.branch) === null || _b === void 0 ? void 0 : _b.name) || null,
         };
         const token = generateToken(user);
         res.json({ token, userResponse });
