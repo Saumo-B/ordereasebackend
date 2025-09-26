@@ -18,6 +18,7 @@ const ingredients_1 = __importDefault(require("./routes/ingredients"));
 const table_1 = __importDefault(require("./routes/table"));
 const userAuth_1 = __importDefault(require("./routes/userAuth"));
 const branch_1 = __importDefault(require("./routes/branch"));
+const auth_1 = require("./middleware/auth");
 const ai_1 = __importDefault(require("./routes/ai"));
 const app = (0, express_1.default)();
 // Helmet and relaxed CSP
@@ -37,43 +38,38 @@ app.use((req, res, next) => {
     next();
 });
 // Apply globally, but skip login/register/menu GET
-// app.use(
-//   unless(
-//     [
-//       /^\/api\/login/,
-//       // /^\/api\/register/,
-//       /^\/api\/menu/,
-//       // /^\/api\/kitchen/,
-//       /^\/api\/myorder/,
-//       /^\/api\/orderv2/,
-//       /^\/api\/order/,
-//       // /^\/api\/ingredients/,
-//       /^\/api\/docs/,
-//       /^\/docs-assets/,
-//       /^\/api\/swagger.json/,
-//       /^\/$/, 
-//     ],
-//     authenticate
-//   )
-// );
+app.use(unless([
+    /^\/api\/login/,
+    // /^\/api\/register/,
+    /^\/api\/menu/,
+    // /^\/api\/kitchen/,
+    /^\/api\/myorder/,
+    /^\/api\/orderv2/,
+    /^\/api\/order/,
+    // /^\/api\/ingredients/,
+    /^\/api\/docs/,
+    /^\/docs-assets/,
+    /^\/api\/swagger.json/,
+    /^\/$/,
+], auth_1.authenticate));
 // Global CORS
 // Allow specific frontend origin
 const allowedOrigins = process.env.FRONTEND_ORIGIN;
 console.log("Allowed:", allowedOrigins);
 app.use((0, cors_1.default)({
-    origin: (origin, callback) => {
-        if (!origin || (allowedOrigins === null || allowedOrigins === void 0 ? void 0 : allowedOrigins.includes(origin))) {
-            callback(null, true);
-        }
-        else {
-            callback(new Error("Not allowed by CORS"));
-        }
-    },
-    // origin: "*",
+    // origin: (origin, callback) => {
+    //   if (!origin || allowedOrigins?.includes(origin)) {
+    //     callback(null, true);
+    //   } else {
+    //     callback(new Error("Not allowed by CORS"));
+    //   }
+    // },
+    origin: "*",
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
 }));
+app.options("*");
 app.use(express_1.default.json());
 // app.use(authenticate);   // populate req.user
 // app.use(autoPermission); // enforce from central map
