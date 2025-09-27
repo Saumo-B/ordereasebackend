@@ -35,6 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.User = void 0;
 const mongoose_1 = __importStar(require("mongoose"));
+const rolePermissions_1 = require("../lib/rolePermissions");
 const UserSchema = new mongoose_1.Schema({
     name: { type: String, required: true },
     email: { type: String, required: true, unique: true },
@@ -47,21 +48,30 @@ const UserSchema = new mongoose_1.Schema({
     },
     permissions: {
         type: [String],
-        default: [], // staff starts with empty permissions
+        default: [],
     },
 }, { timestamps: true });
-// 🔹 Hash password before saving
+//  Hash password before saving
 // UserSchema.pre("save", async function (next) {
 //   const user = this as IUser;
 //   if (!user.isModified("password")) return next();
 //   user.password = await bcrypt.hash(user.password, 10);
 //   next();
 // });
-// 🔹 Compare password
+//  Compare password
 // UserSchema.methods.comparePassword = function (
 //   candidatePassword: string
 // ): Promise<boolean> {
 //   return bcrypt.compare(candidatePassword, this.password);
 // };
+// 🔹 Assign default permissions based on role when creating a new user
+UserSchema.pre("save", function (next) {
+    const user = this;
+    // Only assign default permissions if none are set yet
+    if (!user.permissions || user.permissions.length === 0) {
+        user.permissions = [...(rolePermissions_1.ROLE_DEFAULT_PERMISSIONS[user.role] || [])];
+    }
+    next();
+});
 exports.User = mongoose_1.default.model("User", UserSchema);
 //# sourceMappingURL=User.js.map

@@ -19,6 +19,11 @@ export const PERMISSIONS = {
     TABLE_DELETE: "table:delete",
     TABLE_CREATE: "table:create",
 
+    BRANCH_VIEW: "branch:view",
+    BRANCH_UPDATE: "branch:update",
+    BRANCH_DELETE: "branch:delete",
+    BRANCH_CREATE: "branch:create",
+
     DASHBOARD_VIEW: "dashboard:view",
     SALESREPORT_VIEW: "salesreport:view",
 

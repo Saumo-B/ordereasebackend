@@ -31,11 +31,18 @@ exports.permissionMap = {
     // ----------------------
     // Table routes
     // ----------------------
-    "POST /api/table": permission_1.PERMISSIONS.TABLE_CREATE,
-    "GET /api/table": permission_1.PERMISSIONS.TABLE_VIEW,
-    "GET /api/table/:id": permission_1.PERMISSIONS.TABLE_VIEW,
-    "PATCH /api/table/:id": permission_1.PERMISSIONS.TABLE_UPDATE,
+    "POST   /api/table": permission_1.PERMISSIONS.TABLE_CREATE,
+    "GET    /api/table": permission_1.PERMISSIONS.TABLE_VIEW,
+    "GET    /api/table/:id": permission_1.PERMISSIONS.TABLE_VIEW,
+    "PATCH  /api/table/:id": permission_1.PERMISSIONS.TABLE_UPDATE,
     "DELETE /api/table/:id": permission_1.PERMISSIONS.TABLE_DELETE,
+    // ----------------------
+    // Branch routes
+    // ----------------------
+    "POST   /api/branch": permission_1.PERMISSIONS.BRANCH_CREATE,
+    "GET    /api/branch": permission_1.PERMISSIONS.BRANCH_VIEW,
+    "PUT    /api/branch/:id": permission_1.PERMISSIONS.BRANCH_UPDATE,
+    "DELETE /api/branch/:id": permission_1.PERMISSIONS.BRANCH_DELETE,
     // ----------------------
     // Dashboard & Reports
     // ----------------------
@@ -44,8 +51,8 @@ exports.permissionMap = {
     // ----------------------
     // Staff management
     // ----------------------
-    "POST /api/register": permission_1.PERMISSIONS.STAFF_MANAGE,
-    "PATCH /api/assign/:id": permission_1.PERMISSIONS.STAFF_MANAGE,
-    "DELETE /api/:id": permission_1.PERMISSIONS.STAFF_MANAGE,
+    "POST   /api/register": permission_1.PERMISSIONS.STAFF_MANAGE,
+    "PATCH  /api/assign/:id": permission_1.PERMISSIONS.STAFF_MANAGE,
+    "DELETE /api/user/:id": permission_1.PERMISSIONS.STAFF_MANAGE,
 };
 //# sourceMappingURL=permissionMap.js.map

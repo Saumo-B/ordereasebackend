@@ -32,22 +32,30 @@ export const permissionMap: Record<string, string> = {
   // ----------------------
   // Table routes
   // ----------------------
-  "POST /api/table": PERMISSIONS.TABLE_CREATE,
-  "GET /api/table": PERMISSIONS.TABLE_VIEW,
-  "GET /api/table/:id": PERMISSIONS.TABLE_VIEW,
-  "PATCH /api/table/:id": PERMISSIONS.TABLE_UPDATE,
-  "DELETE /api/table/:id": PERMISSIONS.TABLE_DELETE,
+  "POST   /api/table"     : PERMISSIONS.TABLE_CREATE,
+  "GET    /api/table"     : PERMISSIONS.TABLE_VIEW,
+  "GET    /api/table/:id" : PERMISSIONS.TABLE_VIEW,
+  "PATCH  /api/table/:id" : PERMISSIONS.TABLE_UPDATE,
+  "DELETE /api/table/:id" : PERMISSIONS.TABLE_DELETE,
+
+  // ----------------------
+  // Branch routes
+  // ----------------------
+  "POST   /api/branch"    : PERMISSIONS.BRANCH_CREATE,
+  "GET    /api/branch"    : PERMISSIONS.BRANCH_VIEW,
+  "PUT    /api/branch/:id": PERMISSIONS.BRANCH_UPDATE,
+  "DELETE /api/branch/:id": PERMISSIONS.BRANCH_DELETE,
 
   // ----------------------
   // Dashboard & Reports
   // ----------------------
   "GET /api/dashboard-stats": PERMISSIONS.DASHBOARD_VIEW,
-  "GET /api/sales-report": PERMISSIONS.SALESREPORT_VIEW,
-
+  "GET /api/sales-report"   : PERMISSIONS.SALESREPORT_VIEW,
+  
   // ----------------------
   // Staff management
   // ----------------------
-  "POST /api/register": PERMISSIONS.STAFF_MANAGE,
-  "PATCH /api/assign/:id": PERMISSIONS.STAFF_MANAGE,
-  "DELETE /api/:id": PERMISSIONS.STAFF_MANAGE,
+  "POST   /api/register"  : PERMISSIONS.STAFF_MANAGE,
+  "PATCH  /api/assign/:id": PERMISSIONS.STAFF_MANAGE,
+  "DELETE /api/user/:id"  : PERMISSIONS.STAFF_MANAGE,
 };

@@ -110,41 +110,41 @@ router.post(
 // ----------------------
 // Assign role/permissions to staff
 // ----------------------
-// router.patch(
-//   "/assign/:id",
-//   // authenticate,
-//   requireRole(["owner", "manager"]),
-//   async (req: Request & { user?: IUser }, res: Response, next: NextFunction) => {
-//     try {
-//       const { id } = req.params;
-//       const { role, permissions } = req.body;
+router.patch(
+  "/assign/:id",
+  // authenticate,
+  requireRole(["owner", "manager"]),
+  async (req: Request & { user?: IUser }, res: Response, next: NextFunction) => {
+    try {
+      const { id } = req.params;
+      const { role, permissions } = req.body;
 
-//       const staff = await User.findById(id);
-//       if (!staff) return res.status(404).json({ error: "User not found" });
+      const staff = await User.findById(id);
+      if (!staff) return res.status(404).json({ error: "User not found" });
 
-//       if (staff.role !== "staff") {
-//         return res
-//           .status(400)
-//           .json({ error: "Only staff can be assigned roles/permissions" });
-//       }
+      // if (staff.role !== "staff") {
+      //   return res
+      //     .status(400)
+      //     .json({ error: "Only staff can be assigned roles/permissions" });
+      // }
 
-//       if (req.user?.role === "manager" && role && role !== "staff") {
-//         return res
-//           .status(403)
-//           .json({ error: "Manager cannot assign non-staff roles" });
-//       }
+      if (req.user?.role === "manager" && role && role !== "staff") {
+        return res
+          .status(403)
+          .json({ error: "Manager cannot assign non-staff roles" });
+      }
 
-//       if (role) staff.role = role;
-//       if (Array.isArray(permissions)) staff.permissions = permissions;
+      if (role) staff.role = role;
+      if (Array.isArray(permissions)) staff.permissions = permissions;
 
-//       await staff.save();
+      await staff.save();
 
-//       res.json({ message: "Staff updated", staff });
-//     } catch (e) {
-//       next(e);
-//     }
-//   }
-// );
+      res.json({ message: "Staff updated", staff });
+    } catch (e) {
+      next(e);
+    }
+  }
+);
 
 // ----------------------
 // Profiles
@@ -177,7 +177,7 @@ router.get(
 // Delete User
 // ----------------------
 router.delete(
-  "/:id",
+  "/user/:id",
   // authenticate,
   requireRole(["owner","manager"]),
   async (req: Request & { user?: IUser }, res: Response, next: NextFunction) => {
