@@ -242,7 +242,7 @@ router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         // Reserve new inventory for the updated line items
         yield (0, inventoryService_1.reserveInventory)(order, session);
         // Recalculate the total order amount
-        order.amount = order.lineItems.reduce((sum, it) => { var _a, _b; return sum + ((_b = (_a = it.status) === null || _a === void 0 ? void 0 : _a.active) !== null && _b !== void 0 ? _b : 0) * it.price; }, 0);
+        order.amount = order.lineItems.reduce((sum, it) => { var _a, _b, _c, _d; return sum + (((_b = (_a = it.status) === null || _a === void 0 ? void 0 : _a.active) !== null && _b !== void 0 ? _b : 0) + ((_d = (_c = it.status) === null || _c === void 0 ? void 0 : _c.served) !== null && _d !== void 0 ? _d : 0)) * it.price; }, 0);
         // Merge updated customer info if provided
         if (customer)
             order.customer = Object.assign(Object.assign({}, order.customer), customer);

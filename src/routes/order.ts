@@ -284,7 +284,8 @@ router.patch("/:id", async (req, res, next) => {
 
     // Recalculate the total order amount
     order.amount = order.lineItems.reduce(
-      (sum, it) => sum + (it.status?.active ?? 0) * it.price, 0
+      (sum, it) => sum + ((it.status?.active ?? 0) + (it.status?.served ?? 0)) * it.price,
+      0
     );
 
     // Merge updated customer info if provided
