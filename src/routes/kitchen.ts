@@ -277,21 +277,29 @@ router.get("/dashboard-stats", authenticate, async (req, res, next) => {
   }
 });
 
-router.get("/sales-report",authenticate, async (req, res, next) => {
+router.get("/sales-report", authenticate, async (req, res, next) => {
   try {
-    const { startDate, endDate } = req.query as { startDate?: string; endDate?: string };
+    const { startDate, endDate, branchId } = req.query as { startDate?: string; endDate?: string; branchId?: string };
 
+    // --- Validate required params
     if (!startDate || !endDate) {
       return res.status(400).json({ error: "startDate and endDate are required (YYYY-MM-DD)" });
+    }
+
+    // --- Validate branchId if provided
+    if (branchId && !mongoose.Types.ObjectId.isValid(branchId)) {
+      return res.status(400).json({ error: "Invalid branchId" });
     }
 
     const start = dayjs(startDate).startOf("day").toDate();
     const end = dayjs(endDate).endOf("day").toDate();
 
-    // Fetch all orders in range (include refunds for summary)
-    const orders = await Order.find({
-      createdAt: { $gte: start, $lte: end },
-    })
+    // --- Build query filter
+    const filter: any = { createdAt: { $gte: start, $lte: end } };
+    if (branchId) filter.branch = branchId;
+
+    // --- Fetch orders
+    const orders = await Order.find(filter)
       .populate("lineItems.menuItem")
       .sort({ createdAt: 1 })
       .lean();
@@ -316,18 +324,18 @@ router.get("/sales-report",authenticate, async (req, res, next) => {
       });
     }
 
-    // ---- Summary
+    // --- Summary
     const paidOrders = orders.filter(o => ["paid", "done"].includes(o.status));
     const refundedOrders = orders.filter(o => o.status === "failed");
 
     const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
-    const totalOrders = paidOrders.length;  
+    const totalOrders = paidOrders.length;
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     const totalRefunds = refundedOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
     const refundedOrdersCount = refundedOrders.length;
 
-    // ---- Sales trend (group by date)
+    // --- Sales trend by date
     const trendMap: Record<string, { revenue: number; count: number }> = {};
     for (const order of paidOrders) {
       const date = dayjs(order.createdAt).format("YYYY-MM-DD");
@@ -341,13 +349,12 @@ router.get("/sales-report",authenticate, async (req, res, next) => {
       orderCount: v.count,
     }));
 
-    // ---- Item analysis
+    // --- Item analysis
     const itemMap: Record<string, { quantity: number; revenue: number }> = {};
     for (const order of paidOrders) {
       for (const li of order.lineItems) {
-        // Type assertion to let TypeScript know that li will have the virtual 'qty'
         const name = (li.menuItem as any)?.name || "Unknown Item";
-        const qty = (li as any).qty || 0;  // Type assertion to access 'qty' safely
+        const qty = ((li.status?.active ?? 0) + (li.status?.served ?? 0)); // total qty
         const revenue = (li.price || 0) * qty;
 
         if (!itemMap[name]) itemMap[name] = { quantity: 0, revenue: 0 };
@@ -355,13 +362,12 @@ router.get("/sales-report",authenticate, async (req, res, next) => {
         itemMap[name].revenue += revenue;
       }
     }
-
     const topSellingItems = Object.entries(itemMap)
       .map(([name, v]) => ({ name, quantity: v.quantity, revenue: v.revenue }))
       .sort((a, b) => b.quantity - a.quantity)
       .slice(0, 5);
 
-    // ---- Customer insights
+    // --- Customer insights
     const customerMap: Record<string, number> = {};
     for (const order of paidOrders) {
       const phone = order.customer?.phone;
@@ -377,8 +383,7 @@ router.get("/sales-report",authenticate, async (req, res, next) => {
           .reduce((sum, o) => sum + (o.amount || 0), 0) > 5000 // Example: >5000 spent
     ).length;
 
-    // ---- Payment methods
-    // Assuming you have payment method info (if not, you’ll need to add a field)
+    // --- Payment methods
     const methodMap: Record<string, number> = {};
     for (const order of paidOrders) {
       const method = (order as any).paymentMethod || "Unknown";
@@ -386,7 +391,7 @@ router.get("/sales-report",authenticate, async (req, res, next) => {
     }
     const paymentMethods = Object.entries(methodMap).map(([method, count]) => ({ method, count }));
 
-    // ---- Detailed orders
+    // --- Detailed orders
     const detailedOrders = paidOrders.map(o => ({
       id: o._id,
       token: o.orderToken,
@@ -396,7 +401,7 @@ router.get("/sales-report",authenticate, async (req, res, next) => {
       status: o.status,
     }));
 
-    // ---- Response
+    // --- Response
     return res.json({
       summary: {
         totalRevenue,
@@ -422,5 +427,6 @@ router.get("/sales-report",authenticate, async (req, res, next) => {
     next(err);
   }
 });
+
 
 export default router;

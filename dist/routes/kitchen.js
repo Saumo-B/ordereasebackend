@@ -258,18 +258,25 @@ router.get("/dashboard-stats", auth_1.authenticate, (req, res, next) => __awaite
     }
 }));
 router.get("/sales-report", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    var _a, _b;
+    var _a, _b, _c, _d, _e, _f;
     try {
-        const { startDate, endDate } = req.query;
+        const { startDate, endDate, branchId } = req.query;
+        // --- Validate required params
         if (!startDate || !endDate) {
             return res.status(400).json({ error: "startDate and endDate are required (YYYY-MM-DD)" });
         }
+        // --- Validate branchId if provided
+        if (branchId && !mongoose_1.default.Types.ObjectId.isValid(branchId)) {
+            return res.status(400).json({ error: "Invalid branchId" });
+        }
         const start = (0, dayjs_1.default)(startDate).startOf("day").toDate();
         const end = (0, dayjs_1.default)(endDate).endOf("day").toDate();
-        // Fetch all orders in range (include refunds for summary)
-        const orders = yield Order_1.Order.find({
-            createdAt: { $gte: start, $lte: end },
-        })
+        // --- Build query filter
+        const filter = { createdAt: { $gte: start, $lte: end } };
+        if (branchId)
+            filter.branch = branchId;
+        // --- Fetch orders
+        const orders = yield Order_1.Order.find(filter)
             .populate("lineItems.menuItem")
             .sort({ createdAt: 1 })
             .lean();
@@ -292,7 +299,7 @@ router.get("/sales-report", auth_1.authenticate, (req, res, next) => __awaiter(v
                 detailedOrders: [],
             });
         }
-        // ---- Summary
+        // --- Summary
         const paidOrders = orders.filter(o => ["paid", "done"].includes(o.status));
         const refundedOrders = orders.filter(o => o.status === "failed");
         const totalRevenue = paidOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
@@ -300,7 +307,7 @@ router.get("/sales-report", auth_1.authenticate, (req, res, next) => __awaiter(v
         const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
         const totalRefunds = refundedOrders.reduce((sum, o) => sum + (o.amount || 0), 0);
         const refundedOrdersCount = refundedOrders.length;
-        // ---- Sales trend (group by date)
+        // --- Sales trend by date
         const trendMap = {};
         for (const order of paidOrders) {
             const date = (0, dayjs_1.default)(order.createdAt).format("YYYY-MM-DD");
@@ -314,13 +321,12 @@ router.get("/sales-report", auth_1.authenticate, (req, res, next) => __awaiter(v
             revenue: v.revenue,
             orderCount: v.count,
         }));
-        // ---- Item analysis
+        // --- Item analysis
         const itemMap = {};
         for (const order of paidOrders) {
             for (const li of order.lineItems) {
-                // Type assertion to let TypeScript know that li will have the virtual 'qty'
                 const name = ((_a = li.menuItem) === null || _a === void 0 ? void 0 : _a.name) || "Unknown Item";
-                const qty = li.qty || 0; // Type assertion to access 'qty' safely
+                const qty = (((_c = (_b = li.status) === null || _b === void 0 ? void 0 : _b.active) !== null && _c !== void 0 ? _c : 0) + ((_e = (_d = li.status) === null || _d === void 0 ? void 0 : _d.served) !== null && _e !== void 0 ? _e : 0)); // total qty
                 const revenue = (li.price || 0) * qty;
                 if (!itemMap[name])
                     itemMap[name] = { quantity: 0, revenue: 0 };
@@ -332,10 +338,10 @@ router.get("/sales-report", auth_1.authenticate, (req, res, next) => __awaiter(v
             .map(([name, v]) => ({ name, quantity: v.quantity, revenue: v.revenue }))
             .sort((a, b) => b.quantity - a.quantity)
             .slice(0, 5);
-        // ---- Customer insights
+        // --- Customer insights
         const customerMap = {};
         for (const order of paidOrders) {
-            const phone = (_b = order.customer) === null || _b === void 0 ? void 0 : _b.phone;
+            const phone = (_f = order.customer) === null || _f === void 0 ? void 0 : _f.phone;
             if (phone)
                 customerMap[phone] = (customerMap[phone] || 0) + 1;
         }
@@ -345,15 +351,14 @@ router.get("/sales-report", auth_1.authenticate, (req, res, next) => __awaiter(v
             .filter(o => { var _a; return ((_a = o.customer) === null || _a === void 0 ? void 0 : _a.phone) && customerMap[o.customer.phone] === phoneOrderCount; })
             .reduce((sum, o) => sum + (o.amount || 0), 0) > 5000 // Example: >5000 spent
         ).length;
-        // ---- Payment methods
-        // Assuming you have payment method info (if not, you’ll need to add a field)
+        // --- Payment methods
         const methodMap = {};
         for (const order of paidOrders) {
             const method = order.paymentMethod || "Unknown";
             methodMap[method] = (methodMap[method] || 0) + 1;
         }
         const paymentMethods = Object.entries(methodMap).map(([method, count]) => ({ method, count }));
-        // ---- Detailed orders
+        // --- Detailed orders
         const detailedOrders = paidOrders.map(o => {
             var _a;
             return ({
@@ -365,7 +370,7 @@ router.get("/sales-report", auth_1.authenticate, (req, res, next) => __awaiter(v
                 status: o.status,
             });
         });
-        // ---- Response
+        // --- Response
         return res.json({
             summary: {
                 totalRevenue,
