@@ -27,7 +27,7 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
         const { items = [], customer, branch } = req.body || {};
         // Calculate total
         const amount = items.reduce((sum, it) => sum + it.price * it.status.active, 0);
-        const orderToken = yield (0, token_1.makeToken)();
+        const orderToken = yield (0, token_1.makeToken)(branch);
         // Build order object
         const newOrder = new Order_1.Order({
             status: "created",

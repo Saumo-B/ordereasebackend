@@ -39,7 +39,7 @@ const client= StandardCheckoutClient.getInstance(process.env.MERCHANT_ID!,proces
 // Create order
 router.post("/", async (req, res, next) => {
   try {
-    const { items = [], customer } = req.body || {};
+    const { items = [], customer,branch } = req.body || {};
 
     // 🔹 Validate items
     for (const { menuItem, qty, price } of items) {
@@ -65,13 +65,14 @@ router.post("/", async (req, res, next) => {
     const amount = items.reduce((sum: number, it: any) => sum + it.price * it.qty, 0);
 
     // 🔹 Create order
-    const orderToken = await makeToken();
+    const orderToken = await makeToken(branch);
     const order = await Order.create({
       status: "created",
       amount,
       currency: "INR",
       lineItems: items,
       customer,
+      branch,
       orderToken,
       paymentMethod: "paymentgateway",
     }) ;
