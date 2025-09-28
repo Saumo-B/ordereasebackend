@@ -46,8 +46,8 @@ exports.permissionMap = {
     // ----------------------
     // Dashboard & Reports
     // ----------------------
-    "GET /api/dashboard-stats": permission_1.PERMISSIONS.DASHBOARD_VIEW,
-    "GET /api/sales-report": permission_1.PERMISSIONS.SALESREPORT_VIEW,
+    "GET /api/kitchen/dashboard-stats": permission_1.PERMISSIONS.DASHBOARD_VIEW,
+    "GET /api/kitchen/sales-report": permission_1.PERMISSIONS.SALESREPORT_VIEW,
     // ----------------------
     // Staff management
     // ----------------------

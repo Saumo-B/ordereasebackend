@@ -27,30 +27,51 @@ export const requirePermission = (permission: string) => {
 };
 
 export function autoPermission(req: Request, res: Response, next: NextFunction) {
-  console.log(" Permission middleware called");
+  console.log("=== Permission middleware called ===");
+  console.log("Request path:", req.path);
+  console.log("Request method:", req.method);
+
   const user = req.user as IUser | undefined;
-  if (!user) return res.status(401).json({ error: "Unauthorized" });
+  console.log("User attached to request:", user ? user.email : "undefined");
+  console.log("User role:", user?.role);
+  console.log("User permissions:", user?.permissions);
 
-  // Owner bypass
-  if (user.role === "owner") return next();
+  if (!user) {
+    console.log("No user found on request → Unauthorized");
+    return res.status(401).json({ error: "Unauthorized" });
+  }
 
-  // Normalize route key (method + path)
-  const key = `${req.method.toUpperCase()} ${req.route?.path}`;
+  // Owner / dev bypass (optional)
+  // if (user.role === "dev") {
+  //   console.log("User is dev → bypass permission check");
+  //   return next();
+  // }
 
-  const required = permissionMap[key];
+  // Normalize route key
+  const routeKey = `${req.method.toUpperCase()} ${req.baseUrl}${req.path}`;
+  console.log("Computed route key:", routeKey);
+
+  const required = permissionMap[routeKey];
+  console.log("Required permission for this route:", required || "none");
+
   if (!required) {
-    // route has no explicit restriction
+    console.log("No explicit permission required → allow");
     return next();
   }
 
   // Manager shortcut
   if (user.role === "manager" && required === "staff:manage") {
+    console.log("Manager shortcut → allow");
     return next();
   }
 
   if (!user.permissions.includes(required)) {
+    console.log(
+      `User permissions [${user.permissions}] do NOT include required [${required}] → Forbidden`
+    );
     return res.status(403).json({ error: "Permission denied" });
   }
 
+  console.log("User has required permission → allow");
   next();
 }

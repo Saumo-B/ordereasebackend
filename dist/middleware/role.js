@@ -27,28 +27,41 @@ const requirePermission = (permission) => {
 };
 exports.requirePermission = requirePermission;
 function autoPermission(req, res, next) {
-    var _a;
-    console.log(" Permission middleware called");
+    console.log("=== Permission middleware called ===");
+    console.log("Request path:", req.path);
+    console.log("Request method:", req.method);
     const user = req.user;
-    if (!user)
+    console.log("User attached to request:", user ? user.email : "undefined");
+    console.log("User role:", user === null || user === void 0 ? void 0 : user.role);
+    console.log("User permissions:", user === null || user === void 0 ? void 0 : user.permissions);
+    if (!user) {
+        console.log("No user found on request → Unauthorized");
         return res.status(401).json({ error: "Unauthorized" });
-    // Owner bypass
-    if (user.role === "owner")
-        return next();
-    // Normalize route key (method + path)
-    const key = `${req.method.toUpperCase()} ${(_a = req.route) === null || _a === void 0 ? void 0 : _a.path}`;
-    const required = permissionMap_1.permissionMap[key];
+    }
+    // Owner / dev bypass (optional)
+    // if (user.role === "dev") {
+    //   console.log("User is dev → bypass permission check");
+    //   return next();
+    // }
+    // Normalize route key
+    const routeKey = `${req.method.toUpperCase()} ${req.baseUrl}${req.path}`;
+    console.log("Computed route key:", routeKey);
+    const required = permissionMap_1.permissionMap[routeKey];
+    console.log("Required permission for this route:", required || "none");
     if (!required) {
-        // route has no explicit restriction
+        console.log("No explicit permission required → allow");
         return next();
     }
     // Manager shortcut
     if (user.role === "manager" && required === "staff:manage") {
+        console.log("Manager shortcut → allow");
         return next();
     }
     if (!user.permissions.includes(required)) {
+        console.log(`User permissions [${user.permissions}] do NOT include required [${required}] → Forbidden`);
         return res.status(403).json({ error: "Permission denied" });
     }
+    console.log("User has required permission → allow");
     next();
 }
 //# sourceMappingURL=role.js.map

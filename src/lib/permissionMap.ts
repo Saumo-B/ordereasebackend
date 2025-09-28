@@ -49,8 +49,8 @@ export const permissionMap: Record<string, string> = {
   // ----------------------
   // Dashboard & Reports
   // ----------------------
-  "GET /api/dashboard-stats": PERMISSIONS.DASHBOARD_VIEW,
-  "GET /api/sales-report"   : PERMISSIONS.SALESREPORT_VIEW,
+  "GET /api/kitchen/dashboard-stats": PERMISSIONS.DASHBOARD_VIEW,
+  "GET /api/kitchen/sales-report"   : PERMISSIONS.SALESREPORT_VIEW,
   
   // ----------------------
   // Staff management
