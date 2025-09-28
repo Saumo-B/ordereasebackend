@@ -4,6 +4,12 @@ import { Request, Response, NextFunction } from "express";
 import { IUser , UserRole } from "../models/User";
 import { permissionMap } from "../lib/permissionMap";
 
+
+function normalizePath(path: string) {
+  // Replace Mongo ObjectId patterns with :id
+  return path.replace(/\/[a-f0-9]{24}/gi, "/:id");
+}
+
 // Role guard
 export const requireRole = (roles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -48,7 +54,7 @@ export function autoPermission(req: Request, res: Response, next: NextFunction) 
   // }
 
   // Normalize route key
-  const routeKey = `${req.method.toUpperCase()} ${req.baseUrl}${req.path}`;
+  const routeKey = `${req.method.toUpperCase()} ${normalizePath(req.baseUrl + req.path)}`;
   console.log("Computed route key:", routeKey);
 
   const required = permissionMap[routeKey];
