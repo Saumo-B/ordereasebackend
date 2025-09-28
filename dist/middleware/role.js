@@ -1,4 +1,5 @@
 "use strict";
+//src/middleware/role.ts
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.requirePermission = exports.requireRole = void 0;
 exports.autoPermission = autoPermission;

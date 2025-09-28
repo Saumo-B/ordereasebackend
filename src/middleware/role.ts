@@ -1,3 +1,5 @@
+//src/middleware/role.ts
+
 import { Request, Response, NextFunction } from "express";
 import { IUser , UserRole } from "../models/User";
 import { permissionMap } from "../lib/permissionMap";

@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PERMISSIONS = void 0;
+//src/lib/permission.ts
 exports.PERMISSIONS = {
     MENU_CREATE: "menu:create",
     MENU_VIEW: "menu:view",

@@ -1,3 +1,4 @@
+//src/lib/permission.ts
 export const PERMISSIONS = {
     MENU_CREATE: "menu:create",
     MENU_VIEW: "menu:view",
