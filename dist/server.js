@@ -43,15 +43,14 @@ app.use((req, res, next) => {
 const allowedOrigins = process.env.FRONTEND_ORIGIN;
 console.log("Allowed:", allowedOrigins);
 app.use((0, cors_1.default)({
-    origin: (origin, callback) => {
-        if (!origin || (allowedOrigins === null || allowedOrigins === void 0 ? void 0 : allowedOrigins.includes(origin))) {
-            callback(null, true);
-        }
-        else {
-            callback(new Error("Not allowed by CORS"));
-        }
-    },
-    // origin: "*",
+    // origin: (origin, callback) => {
+    //   if (!origin || allowedOrigins?.includes(origin)) {
+    //     callback(null, true);
+    //   } else {
+    //     callback(new Error("Not allowed by CORS"));
+    //   }
+    // },
+    origin: "*",
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
