@@ -93,7 +93,7 @@ app.use(express.json());
 // });
 
 // app.use(authenticate);   // populate req.user
-// app.use(autoPermission); // enforce from central map
+app.use(autoPermission); // enforce from central map
 
 // API routes
 app.use("/api/orders", orders);

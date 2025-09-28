@@ -58,4 +58,5 @@ export const permissionMap: Record<string, string> = {
   "POST   /api/register"  : PERMISSIONS.STAFF_MANAGE,
   "PATCH  /api/assign/:id": PERMISSIONS.STAFF_MANAGE,
   "DELETE /api/user/:id"  : PERMISSIONS.STAFF_MANAGE,
+  "POST   /api/login/"    : PERMISSIONS.ORDER_VIEW,
 };

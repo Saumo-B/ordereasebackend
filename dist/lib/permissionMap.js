@@ -54,5 +54,6 @@ exports.permissionMap = {
     "POST   /api/register": permission_1.PERMISSIONS.STAFF_MANAGE,
     "PATCH  /api/assign/:id": permission_1.PERMISSIONS.STAFF_MANAGE,
     "DELETE /api/user/:id": permission_1.PERMISSIONS.STAFF_MANAGE,
+    "POST   /api/login/": permission_1.PERMISSIONS.ORDER_VIEW,
 };
 //# sourceMappingURL=permissionMap.js.map
