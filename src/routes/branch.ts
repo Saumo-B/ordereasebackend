@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { Branch, IBranch } from "../models/Branch";
+import { authenticate } from "../middleware/auth";
 
 const router = Router();
 
 // ✅ Create Branch
-router.post("/", async (req, res, next) => {
+router.post("/",authenticate, async (req, res, next) => {
   try {
     const branch = new Branch(req.body as IBranch);
     await branch.save();
@@ -15,7 +16,7 @@ router.post("/", async (req, res, next) => {
 });
 
 // ✅ Get All Branches
-router.get("/", async (req, res, next) => {
+router.get("/",authenticate, async (req, res, next) => {
   try {
     const branches = await Branch.find().lean();
     res.json(branches);
@@ -25,7 +26,7 @@ router.get("/", async (req, res, next) => {
 });
 
 // ✅ Get Single Branch
-router.get("/:id", async (req, res, next) => {
+router.get("/:id",authenticate, async (req, res, next) => {
   try {
     const branch = await Branch.findById(req.params.id).lean();
     if (!branch) return res.status(404).json({ message: "Branch not found" });
@@ -36,7 +37,7 @@ router.get("/:id", async (req, res, next) => {
 });
 
 // ✅ Update Branch
-router.put("/:id", async (req, res, next) => {
+router.put("/:id",authenticate, async (req, res, next) => {
   try {
     const branch = await Branch.findByIdAndUpdate(
       req.params.id,
@@ -51,7 +52,7 @@ router.put("/:id", async (req, res, next) => {
 });
 
 // ✅ Delete Branch
-router.delete("/:id", async (req, res, next)=> {
+router.delete("/:id",authenticate, async (req, res, next)=> {
   try {
     const branch = await Branch.findByIdAndDelete(req.params.id);
     if (!branch) return res.status(404).json({ message: "Branch not found" });

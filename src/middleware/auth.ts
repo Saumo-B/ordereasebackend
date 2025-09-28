@@ -14,22 +14,26 @@ export const authenticate = async (
   res: Response,
   next: NextFunction
 ) => {
+  console.log(" authenticate middleware called");
   try {
     const authHeader = req.headers["authorization"];
+    console.log("Auth header:", req.headers["authorization"]);
     if (!authHeader) {
       return res.status(401).json({ error: "Authorization header missing" });
     }
 
     const token = authHeader.split(" ")[1];
+    console.log("Extracted token:", token);
     if (!token) {
       return res.status(401).json({ error: "Token missing" });
     }
 
     // verify token
     const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload & { id: string };
-
+    console.log("Decoded JWT: ", decoded)
     // fetch user
     const user = await User.findById(decoded.id);
+    console.log("Fetched user:", user?.email || "not found");
     if (!user) {
       return res.status(401).json({ error: "Invalid token user" });
     }

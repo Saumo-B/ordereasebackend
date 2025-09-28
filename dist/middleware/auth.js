@@ -18,19 +18,24 @@ const User_1 = require("../models/User");
 const JWT_SECRET = process.env.JWT_SECRET || "changeme"; // move to .env
 //  Authentication middleware
 const authenticate = (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+    console.log(" authenticate middleware called");
     try {
         const authHeader = req.headers["authorization"];
+        console.log("Auth header:", req.headers["authorization"]);
         if (!authHeader) {
             return res.status(401).json({ error: "Authorization header missing" });
         }
         const token = authHeader.split(" ")[1];
+        console.log("Extracted token:", token);
         if (!token) {
             return res.status(401).json({ error: "Token missing" });
         }
         // verify token
         const decoded = jsonwebtoken_1.default.verify(token, JWT_SECRET);
+        console.log("Decoded JWT: ", decoded);
         // fetch user
         const user = yield User_1.User.findById(decoded.id);
+        console.log("Fetched user:", (user === null || user === void 0 ? void 0 : user.email) || "not found");
         if (!user) {
             return res.status(401).json({ error: "Invalid token user" });
         }

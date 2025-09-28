@@ -28,6 +28,7 @@ const requirePermission = (permission) => {
 exports.requirePermission = requirePermission;
 function autoPermission(req, res, next) {
     var _a;
+    console.log(" Permission middleware called");
     const user = req.user;
     if (!user)
         return res.status(401).json({ error: "Unauthorized" });

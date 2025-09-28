@@ -9,6 +9,8 @@ const helmet_1 = __importDefault(require("helmet"));
 const cors_1 = __importDefault(require("cors"));
 const mongoose_1 = __importDefault(require("mongoose"));
 const path_1 = __importDefault(require("path"));
+const auth_1 = require("./middleware/auth");
+const role_1 = require("./middleware/role");
 const order_1 = __importDefault(require("./routes/order"));
 const kitchen_1 = __importDefault(require("./routes/kitchen"));
 const myorder_1 = __importDefault(require("./routes/myorder"));
@@ -36,39 +38,20 @@ app.use((req, res, next) => {
     console.log("Request Origin:", req.headers.origin);
     next();
 });
-// Apply globally, but skip login/register/menu GET
-// app.use(
-//   unless(
-//     [
-//       /^\/api\/login/,
-//       // /^\/api\/register/,
-//       /^\/api\/menu/,
-//       // /^\/api\/kitchen/,
-//       /^\/api\/myorder/,
-//       /^\/api\/orderv2/,
-//       /^\/api\/order/,
-//       // /^\/api\/ingredients/,
-//       /^\/api\/docs/,
-//       /^\/docs-assets/,
-//       /^\/api\/swagger.json/,
-//       /^\/$/, 
-//     ],
-//     authenticate
-//   )
-// );
 // Global CORS
 // Allow specific frontend origin
 const allowedOrigins = process.env.FRONTEND_ORIGIN;
 console.log("Allowed:", allowedOrigins);
 app.use((0, cors_1.default)({
-    // origin: (origin, callback) => {
-    //   if (!origin || allowedOrigins?.includes(origin)) {
-    //     callback(null, true);
-    //   } else {
-    //     callback(new Error("Not allowed by CORS"));
-    //   }
-    // },
-    origin: "*",
+    origin: (origin, callback) => {
+        if (!origin || (allowedOrigins === null || allowedOrigins === void 0 ? void 0 : allowedOrigins.includes(origin))) {
+            callback(null, true);
+        }
+        else {
+            callback(new Error("Not allowed by CORS"));
+        }
+    },
+    // origin: "*",
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -84,20 +67,30 @@ app.use(express_1.default.json());
 //   }
 //   next();
 // });
+// Apply globally, but skip login/register/menu GET
+app.use(unless([
+    /^\/api\/login/,
+    // /^\/api\/register/,
+    /^\/api\/menu/,
+    // /^\/api\/kitchen/,
+    /^\/api\/myorder/,
+    /^\/api\/orderv2/,
+    /^\/api\/order/,
+    // /^\/api\/ingredients/,
+    /^\/api\/docs/,
+    /^\/docs-assets/,
+    /^\/api\/swagger.json/,
+    /^\/$/,
+], auth_1.authenticate));
 // app.use(authenticate);   // populate req.user
-// app.use(
-//   unless(
-//     [
-//       /^\/api\/login/,
-//       // /^\/api\/register/,
-//       /^\/api\/docs/,
-//       /^\/docs-assets/,
-//       /^\/api\/swagger.json/,
-//       /^\/$/, 
-//     ],
-//     autoPermission
-//   )
-// );
+app.use(unless([
+    /^\/api\/login/,
+    // /^\/api\/register/,
+    /^\/api\/docs/,
+    /^\/docs-assets/,
+    /^\/api\/swagger.json/,
+    /^\/$/,
+], role_1.autoPermission));
 // app.use(autoPermission); // enforce from central map
 // API routes
 app.use("/api/orders", order_1.default);
@@ -116,6 +109,9 @@ app.use("/api/docs", express_1.default.static(path_1.default.join(__dirname, "do
 // Serve swagger JSON
 app.get("/api/swagger.json", (req, res) => {
     res.sendFile(path_1.default.join(__dirname, "swagger-output.json"));
+});
+app.get("/ping", auth_1.authenticate, (req, res) => {
+    res.json({ message: "pong" });
 });
 // Root
 app.get("/", (req, res) => res.status(200).json({ STATUS: "Payment engine is running" }));
