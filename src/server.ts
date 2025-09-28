@@ -93,19 +93,19 @@ app.use(express.json());
 // });
 
 // app.use(authenticate);   // populate req.user
-app.use(
-  unless(
-    [
-      /^\/api\/login/,
-      // /^\/api\/register/,
-      /^\/api\/docs/,
-      /^\/docs-assets/,
-      /^\/api\/swagger.json/,
-      /^\/$/, 
-    ],
-    autoPermission
-  )
-);
+// app.use(
+//   unless(
+//     [
+//       /^\/api\/login/,
+//       // /^\/api\/register/,
+//       /^\/api\/docs/,
+//       /^\/docs-assets/,
+//       /^\/api\/swagger.json/,
+//       /^\/$/, 
+//     ],
+//     autoPermission
+//   )
+// );
 
 // app.use(autoPermission); // enforce from central map
 

@@ -18,7 +18,6 @@ const ingredients_1 = __importDefault(require("./routes/ingredients"));
 const table_1 = __importDefault(require("./routes/table"));
 const userAuth_1 = __importDefault(require("./routes/userAuth"));
 const branch_1 = __importDefault(require("./routes/branch"));
-const role_1 = require("./middleware/role");
 const ai_1 = __importDefault(require("./routes/ai"));
 const app = (0, express_1.default)();
 // Helmet and relaxed CSP
@@ -86,14 +85,19 @@ app.use(express_1.default.json());
 //   next();
 // });
 // app.use(authenticate);   // populate req.user
-app.use(unless([
-    /^\/api\/login/,
-    // /^\/api\/register/,
-    /^\/api\/docs/,
-    /^\/docs-assets/,
-    /^\/api\/swagger.json/,
-    /^\/$/,
-], role_1.autoPermission));
+// app.use(
+//   unless(
+//     [
+//       /^\/api\/login/,
+//       // /^\/api\/register/,
+//       /^\/api\/docs/,
+//       /^\/docs-assets/,
+//       /^\/api\/swagger.json/,
+//       /^\/$/, 
+//     ],
+//     autoPermission
+//   )
+// );
 // app.use(autoPermission); // enforce from central map
 // API routes
 app.use("/api/orders", order_1.default);
