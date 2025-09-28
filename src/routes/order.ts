@@ -239,80 +239,86 @@ router.get("/detail", async (req, res, next) => {
 //   }
 // });
 
-// PATCH /api/orders/:id
+async function runWithRetry<T>(
+  fn: (session: mongoose.ClientSession) => Promise<T>,
+  retries = 3
+): Promise<T> {
+  for (let i = 0; i < retries; i++) {
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      const result = await fn(session);
+      await session.commitTransaction();
+      session.endSession();
+      return result;
+    } catch (err: any) {
+      await session.abortTransaction();
+      session.endSession();
 
+      if (err.message.includes("Write conflict") && i < retries - 1) {
+        console.warn(`Retrying transaction (attempt ${i + 1})`);
+        continue;
+      }
+      throw err;
+    }
+  }
+  throw new Error("Transaction failed after retries");
+}
 
-// PATCH /orders/:id
-router.patch("/:id", async (req, res, next) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
+router.patch("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { items = [], customer } = req.body;
 
-    // Validate the order ID
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ error: "Invalid order ID" });
-    }
+    const result = await runWithRetry(async (session) => {
+      if (!mongoose.Types.ObjectId.isValid(id)) {
+        throw new Error("Invalid order ID");
+      }
 
-    // Fetch the order
-    const order = await Order.findById(id).session(session);
-    if (!order) return res.status(404).json({ error: "Order not found" });
+      const order = await Order.findById(id).session(session);
+      if (!order) throw new Error("Order not found");
+      if (order.status === "paid") throw new Error("Paid orders cannot be updated");
 
-    // Prevent updates on paid orders
-    if (order.status === "paid") {
-      return res.status(400).json({ error: "Paid orders cannot be updated" });
-    }
+      // Release old inventory
+      await releaseInventory(
+        order.lineItems.map((it) => ({
 
-    // Release the old inventory based on the active quantities
-    await releaseInventory(
-      order.lineItems.map((it) => ({
+          menuItem: it.menuItem,
+          qty: it.status?.active ?? 0,
+        })),
+        session
+      );
+
+      // Update line items
+      order.lineItems = items.map((it: any) => ({
         menuItem: it.menuItem,
-        qty: it.status?.active ?? 0,  
-      }))
-    );
+        status: it.status,
+        price: it.price,
+      }));
 
-    // Validate & update line items
-    order.lineItems = items.map((it: any) => ({
-      menuItem: it.menuItem,
-      status: it.status,  // Use the new status (active and served)
-      price: it.price,
-    }));
+      // Reserve new inventory
+      await reserveInventory(order, session);
 
-    // Reserve new inventory for the updated line items
-    await reserveInventory(order, session);
+      // Recalculate total
+      order.amount = order.lineItems.reduce(
+        (sum, it) =>
+          sum + ((it.status?.active ?? 0) + (it.status?.served ?? 0)) * it.price,
+        0
+      );
 
-    // Recalculate the total order amount
-    order.amount = order.lineItems.reduce(
-      (sum, it) => sum + ((it.status?.active ?? 0) + (it.status?.served ?? 0)) * it.price,
-      0
-    );
+      if (customer) order.customer = { ...order.customer, ...customer };
+      if (order.served) order.served = false;
 
-    // Merge updated customer info if provided
-    if (customer) order.customer = { ...order.customer, ...customer };
+      await order.save({ session });
+      return { message: "Order updated successfully", order };
+    });
 
-    // Reset the served flag (if any item was served before, reset it)
-    if (order.served) order.served = false;
-
-    // Save the updated order
-    await order.save({ session });
-
-    // Commit the transaction and end the session
-    await session.commitTransaction();
-    session.endSession();
-
-    // Send the updated order as the response
-    return res.json({ message: "Order updated successfully", order });
+    res.json(result);
   } catch (e: any) {
-    // If something goes wrong, abort the transaction and end the session
-    await session.abortTransaction();
-    session.endSession();
     console.error("Order update failed:", e);
-    return res.status(400).json({ error: e.message || "Order update failed" });
+    res.status(400).json({ error: e.message || "Order update failed" });
   }
 });
-
 
 router.delete("/:orderId", async (req, res, next) => {
   const session = await mongoose.startSession();

@@ -206,64 +206,73 @@ router.get("/detail", (req, res, next) => __awaiter(void 0, void 0, void 0, func
 //     next(e);
 //   }
 // });
-// PATCH /api/orders/:id
-// PATCH /orders/:id
-router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
-    const session = yield mongoose_1.default.startSession();
-    session.startTransaction();
+function runWithRetry(fn_1) {
+    return __awaiter(this, arguments, void 0, function* (fn, retries = 3) {
+        for (let i = 0; i < retries; i++) {
+            const session = yield mongoose_1.default.startSession();
+            session.startTransaction();
+            try {
+                const result = yield fn(session);
+                yield session.commitTransaction();
+                session.endSession();
+                return result;
+            }
+            catch (err) {
+                yield session.abortTransaction();
+                session.endSession();
+                if (err.message.includes("Write conflict") && i < retries - 1) {
+                    console.warn(`Retrying transaction (attempt ${i + 1})`);
+                    continue;
+                }
+                throw err;
+            }
+        }
+        throw new Error("Transaction failed after retries");
+    });
+}
+router.patch("/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
         const { items = [], customer } = req.body;
-        // Validate the order ID
-        if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
-            return res.status(400).json({ error: "Invalid order ID" });
-        }
-        // Fetch the order
-        const order = yield Order_1.Order.findById(id).session(session);
-        if (!order)
-            return res.status(404).json({ error: "Order not found" });
-        // Prevent updates on paid orders
-        if (order.status === "paid") {
-            return res.status(400).json({ error: "Paid orders cannot be updated" });
-        }
-        // Release the old inventory based on the active quantities
-        yield (0, inventoryService_1.releaseInventory)(order.lineItems.map((it) => {
-            var _a, _b;
-            return ({
+        const result = yield runWithRetry((session) => __awaiter(void 0, void 0, void 0, function* () {
+            if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
+                throw new Error("Invalid order ID");
+            }
+            const order = yield Order_1.Order.findById(id).session(session);
+            if (!order)
+                throw new Error("Order not found");
+            if (order.status === "paid")
+                throw new Error("Paid orders cannot be updated");
+            // Release old inventory
+            yield (0, inventoryService_1.releaseInventory)(order.lineItems.map((it) => {
+                var _a, _b;
+                return ({
+                    menuItem: it.menuItem,
+                    qty: (_b = (_a = it.status) === null || _a === void 0 ? void 0 : _a.active) !== null && _b !== void 0 ? _b : 0,
+                });
+            }), session);
+            // Update line items
+            order.lineItems = items.map((it) => ({
                 menuItem: it.menuItem,
-                qty: (_b = (_a = it.status) === null || _a === void 0 ? void 0 : _a.active) !== null && _b !== void 0 ? _b : 0,
-            });
+                status: it.status,
+                price: it.price,
+            }));
+            // Reserve new inventory
+            yield (0, inventoryService_1.reserveInventory)(order, session);
+            // Recalculate total
+            order.amount = order.lineItems.reduce((sum, it) => { var _a, _b, _c, _d; return sum + (((_b = (_a = it.status) === null || _a === void 0 ? void 0 : _a.active) !== null && _b !== void 0 ? _b : 0) + ((_d = (_c = it.status) === null || _c === void 0 ? void 0 : _c.served) !== null && _d !== void 0 ? _d : 0)) * it.price; }, 0);
+            if (customer)
+                order.customer = Object.assign(Object.assign({}, order.customer), customer);
+            if (order.served)
+                order.served = false;
+            yield order.save({ session });
+            return { message: "Order updated successfully", order };
         }));
-        // Validate & update line items
-        order.lineItems = items.map((it) => ({
-            menuItem: it.menuItem,
-            status: it.status, // Use the new status (active and served)
-            price: it.price,
-        }));
-        // Reserve new inventory for the updated line items
-        yield (0, inventoryService_1.reserveInventory)(order, session);
-        // Recalculate the total order amount
-        order.amount = order.lineItems.reduce((sum, it) => { var _a, _b, _c, _d; return sum + (((_b = (_a = it.status) === null || _a === void 0 ? void 0 : _a.active) !== null && _b !== void 0 ? _b : 0) + ((_d = (_c = it.status) === null || _c === void 0 ? void 0 : _c.served) !== null && _d !== void 0 ? _d : 0)) * it.price; }, 0);
-        // Merge updated customer info if provided
-        if (customer)
-            order.customer = Object.assign(Object.assign({}, order.customer), customer);
-        // Reset the served flag (if any item was served before, reset it)
-        if (order.served)
-            order.served = false;
-        // Save the updated order
-        yield order.save({ session });
-        // Commit the transaction and end the session
-        yield session.commitTransaction();
-        session.endSession();
-        // Send the updated order as the response
-        return res.json({ message: "Order updated successfully", order });
+        res.json(result);
     }
     catch (e) {
-        // If something goes wrong, abort the transaction and end the session
-        yield session.abortTransaction();
-        session.endSession();
         console.error("Order update failed:", e);
-        return res.status(400).json({ error: e.message || "Order update failed" });
+        res.status(400).json({ error: e.message || "Order update failed" });
     }
 }));
 router.delete("/:orderId", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
