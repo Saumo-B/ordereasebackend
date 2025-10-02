@@ -1,8 +1,7 @@
 import { Router } from "express";
 import mongoose from "mongoose";
 import { MenuItem } from "../models/Menu";
-import { authenticate } from "../middleware/auth";
-
+import { autoTagMenuItem } from "../lib/autoTag";
 const router = Router();
 
 /**
@@ -100,6 +99,13 @@ router.post("/", async (req, res, next) => {
       if (!item.name || !item.price) {
         return res.status(400).json({ error: "Each item must have name and price" });
       }
+
+    // Auto-tagging
+    item.tags = [
+      ...(item.tags || []), 
+      ...autoTagMenuItem(item.name, item.description)
+    ];
+    item.tags = [...new Set(item.tags)]; // remove duplicates
 
       // Validate ingredient IDs if recipe provided
       if (Array.isArray(item.recipe)) {

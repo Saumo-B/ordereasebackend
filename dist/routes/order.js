@@ -37,7 +37,7 @@ const client = pg_sdk_node_1.StandardCheckoutClient.getInstance(process.env.MERC
 router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     var _a, _b;
     try {
-        const { items = [], customer, branch } = req.body || {};
+        const { items = [], customer, branch, cookingInstructions } = req.body || {};
         // 🔹 Validate items
         for (const { menuItem, qty, price } of items) {
             if (!menuItem || !qty || !price) {
@@ -67,6 +67,7 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             customer,
             branch,
             orderToken,
+            cookingInstructions,
             paymentMethod: "paymentgateway",
         });
         try {

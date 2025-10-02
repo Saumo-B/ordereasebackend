@@ -13,10 +13,14 @@ router.post("/", async (req, res, next) => {
   session.startTransaction();
 
   try {
-    const { items = [], customer,branch } = req.body || {};
+    const { items = [], customer, branch, cookingInstructions } = req.body || {};
 
-    // Calculate total
-    const amount = items.reduce((sum: number, it: any) => sum + it.price * it.status.active, 0);
+    // Calculate total based on active qty
+    const amount = items.reduce(
+      (sum: number, it: any) => sum + it.price * (it.status?.active ?? 0),
+      0
+    );
+
     const orderToken = await makeToken(branch);
 
     // Build order object
@@ -29,6 +33,7 @@ router.post("/", async (req, res, next) => {
       branch,
       orderToken,
       paymentMethod: "counter",
+      cookingInstructions, // 🔹 store instructions
     }) as OrderDoc;
 
     // Reserve inventory first
@@ -45,12 +50,15 @@ router.post("/", async (req, res, next) => {
       amount: order.amount,
       currency: order.currency,
       token: order.orderToken,
+      cookingInstructions: order.cookingInstructions, // 🔹 return it
     });
   } catch (e: any) {
     await session.abortTransaction();
     session.endSession();
     console.error("Order creation failed:", e);
-    return res.status(400).json({ error: e.message || "Order creation failed" });
+    return res
+      .status(400)
+      .json({ error: e.message || "Order creation failed" });
   }
 });
 

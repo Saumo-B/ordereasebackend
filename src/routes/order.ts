@@ -39,7 +39,7 @@ const client= StandardCheckoutClient.getInstance(process.env.MERCHANT_ID!,proces
 // Create order
 router.post("/", async (req, res, next) => {
   try {
-    const { items = [], customer,branch } = req.body || {};
+    const { items = [], customer,branch,cookingInstructions } = req.body || {};
 
     // 🔹 Validate items
     for (const { menuItem, qty, price } of items) {
@@ -74,6 +74,7 @@ router.post("/", async (req, res, next) => {
       customer,
       branch,
       orderToken,
+      cookingInstructions,
       paymentMethod: "paymentgateway",
     }) ;
        try {

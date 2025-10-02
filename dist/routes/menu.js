@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const mongoose_1 = __importDefault(require("mongoose"));
 const Menu_1 = require("../models/Menu");
+const autoTag_1 = require("../lib/autoTag");
 const router = (0, express_1.Router)();
 /**
  * GET /api/menu
@@ -98,6 +99,12 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             if (!item.name || !item.price) {
                 return res.status(400).json({ error: "Each item must have name and price" });
             }
+            // Auto-tagging
+            item.tags = [
+                ...(item.tags || []),
+                ...(0, autoTag_1.autoTagMenuItem)(item.name, item.description)
+            ];
+            item.tags = [...new Set(item.tags)]; // remove duplicates
             // Validate ingredient IDs if recipe provided
             if (Array.isArray(item.recipe)) {
                 for (const r of item.recipe) {

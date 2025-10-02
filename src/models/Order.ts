@@ -28,6 +28,7 @@ export interface IOrder {
   customer?: ICustomer;
   orderToken?: string;
   paymentMethod: "paymentgateway" | "counter";
+  cookingInstructions?: string;        // 🔹 added
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -74,7 +75,8 @@ const OrderSchema = new mongoose.Schema({
     required: true,
     immutable: true 
   },
-  branch: { type: mongoose.Schema.Types.ObjectId, ref: "Branch", required: true, immutable: true  }, // 🔹 branch required
+  branch: { type: mongoose.Schema.Types.ObjectId, ref: "Branch", required: true, immutable: true },
+  cookingInstructions: { type: String, default:"" }, // 🔹 added here
 }, { timestamps: true });
 
 // Enable virtuals for OrderSchema as well

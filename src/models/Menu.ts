@@ -1,14 +1,16 @@
 import mongoose, { Document, Types } from "mongoose";
 
-interface IRecipe {
+export interface IRecipe {
   ingredient: mongoose.Types.ObjectId;
   qtyRequired: number;
 }
-interface IMenuItem extends Document {
+export interface IMenuItem extends Document {
   name: string;
   price: number;
   outOfStock: boolean;
   category: String,
+  tags: string[];
+  branch:Types.ObjectId;
   description: String,
   imageUrl: String,
   recipe: IRecipe[];
@@ -20,6 +22,7 @@ const MenuItemSchema = new mongoose.Schema({
   category: { type: String },
   description: { type: String },
   imageUrl: { type: String },
+  tags: [{ type: String, ref: "Tag" }],
   branch: { type: mongoose.Schema.Types.ObjectId, ref: "Branch", required: true },
   // recipe: list of ingredient + required qty
   recipe: [{
@@ -28,4 +31,4 @@ const MenuItemSchema = new mongoose.Schema({
   }]
 }, { timestamps: true });
 
-export const MenuItem = mongoose.model("MenuItem", MenuItemSchema);
+export const MenuItem = mongoose.model<IMenuItem>("MenuItem", MenuItemSchema);

@@ -24,12 +24,31 @@
                 "responses": {
                     "200": {
                         "description": "OK"
+                    }
+                }
+            }
+        },
+        "/ping": {
+            "get": {
+                "description": "",
+                "parameters": [
+                    {
+                        "name": "origin",
+                        "in": "header",
+                        "type": "string"
+                    },
+                    {
+                        "name": "authorization",
+                        "in": "header",
+                        "type": "string"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK"
                     },
                     "401": {
                         "description": "Unauthorized"
-                    },
-                    "403": {
-                        "description": "Forbidden"
                     }
                 }
             }
@@ -47,12 +66,6 @@
                 "responses": {
                     "200": {
                         "description": "OK"
-                    },
-                    "401": {
-                        "description": "Unauthorized"
-                    },
-                    "403": {
-                        "description": "Forbidden"
                     }
                 }
             }
@@ -79,6 +92,9 @@
                                     "example": "any"
                                 },
                                 "branch": {
+                                    "example": "any"
+                                },
+                                "cookingInstructions": {
                                     "example": "any"
                                 }
                             }
@@ -475,6 +491,9 @@
                                     "example": "any"
                                 },
                                 "branch": {
+                                    "example": "any"
+                                },
+                                "cookingInstructions": {
                                     "example": "any"
                                 }
                             }
@@ -1271,6 +1290,11 @@
                         "name": "origin",
                         "in": "header",
                         "type": "string"
+                    },
+                    {
+                        "name": "authorization",
+                        "in": "header",
+                        "type": "string"
                     }
                 ],
                 "responses": {
@@ -1293,6 +1317,11 @@
                 "parameters": [
                     {
                         "name": "origin",
+                        "in": "header",
+                        "type": "string"
+                    },
+                    {
+                        "name": "authorization",
                         "in": "header",
                         "type": "string"
                     }
@@ -1322,6 +1351,11 @@
                     },
                     {
                         "name": "origin",
+                        "in": "header",
+                        "type": "string"
+                    },
+                    {
+                        "name": "authorization",
                         "in": "header",
                         "type": "string"
                     }
@@ -1354,6 +1388,11 @@
                         "name": "origin",
                         "in": "header",
                         "type": "string"
+                    },
+                    {
+                        "name": "authorization",
+                        "in": "header",
+                        "type": "string"
                     }
                 ],
                 "responses": {
@@ -1382,6 +1421,11 @@
                     },
                     {
                         "name": "origin",
+                        "in": "header",
+                        "type": "string"
+                    },
+                    {
+                        "name": "authorization",
                         "in": "header",
                         "type": "string"
                     }
