@@ -20,6 +20,7 @@ const ingredients_1 = __importDefault(require("./routes/ingredients"));
 const table_1 = __importDefault(require("./routes/table"));
 const userAuth_1 = __importDefault(require("./routes/userAuth"));
 const branch_1 = __importDefault(require("./routes/branch"));
+const tags_1 = __importDefault(require("./routes/tags"));
 const ai_1 = __importDefault(require("./routes/ai"));
 const app = (0, express_1.default)();
 // Helmet and relaxed CSP
@@ -101,6 +102,7 @@ app.use("/api/table", table_1.default);
 app.use("/api/ingredients", ingredients_1.default);
 app.use("/api/", userAuth_1.default);
 app.use("/api/branch", branch_1.default);
+app.use("/api/tags", tags_1.default);
 app.use("/api/ai", ai_1.default);
 // Serve Swagger UI static files
 app.use("/docs-assets", express_1.default.static(path_1.default.join(__dirname, "docs-assets")));

@@ -17,6 +17,7 @@ import ingredients from "./routes/ingredients";
 import table from "./routes/table";
 import user from "./routes/userAuth";
 import branch from "./routes/branch";
+import tagRoutes from "./routes/tags";
 
 import aiRouter from "./routes/ai";
 
@@ -121,6 +122,7 @@ app.use("/api/table", table);
 app.use("/api/ingredients", ingredients);
 app.use("/api/", user);
 app.use("/api/branch", branch);
+app.use("/api/tags", tagRoutes);
 
 app.use("/api/ai", aiRouter);
 // Serve Swagger UI static files
