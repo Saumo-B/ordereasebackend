@@ -39,7 +39,7 @@ const mongoose_1 = __importStar(require("mongoose"));
 const TagSchema = new mongoose_1.Schema({
     identifier: { type: String, unique: true, required: true },
     name: { type: String, required: true },
-    group: { type: String, default: true },
+    group: { type: String, default: "" },
     multiSelect: { type: Boolean, default: true },
     validCatalogueKinds: { type: [String], default: ["default"] },
     createdBy: { type: mongoose_1.Schema.Types.ObjectId, ref: "User", required: true },

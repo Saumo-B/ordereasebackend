@@ -13,7 +13,7 @@ export interface TagDoc extends Document {
 const TagSchema = new Schema<TagDoc>({
   identifier: { type: String, unique: true, required: true },
   name: { type: String, required: true },
-  group: { type: String, default: true },
+  group: { type: String, default:"" },
   multiSelect: { type: Boolean, default: true },
   validCatalogueKinds: { type: [String], default: ["default"] },
   createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },

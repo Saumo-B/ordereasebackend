@@ -1,5 +1,6 @@
 import express, { Request, Response } from "express";
-import mongoose from "mongoose";
+// import mongoose from "mongoose";
+import { PREDEFINED_TAGS } from "../config/predefinedTags";
 import { Tag } from "../models/Tags";
 
 const router = express.Router();
@@ -42,8 +43,12 @@ router.post("/", async (req: Request, res: Response) => {
  */
 router.get("/", async (req: Request, res: Response) => {
   try {
-    const tags = await Tag.find();
-    return res.json(tags);
+    const userTags = await Tag.find().lean();
+
+    return res.json({
+      predefined: PREDEFINED_TAGS,
+      userdefine: userTags,
+    });
   } catch (err) {
     console.error("Tag fetch error:", err);
     return res.status(500).json({ error: "Internal server error" });

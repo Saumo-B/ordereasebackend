@@ -13,6 +13,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
+// import mongoose from "mongoose";
+const predefinedTags_1 = require("../config/predefinedTags");
 const Tags_1 = require("../models/Tags");
 const router = express_1.default.Router();
 /**
@@ -48,8 +50,11 @@ router.post("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
  */
 router.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const tags = yield Tags_1.Tag.find();
-        return res.json(tags);
+        const userTags = yield Tags_1.Tag.find().lean();
+        return res.json({
+            predefined: predefinedTags_1.PREDEFINED_TAGS,
+            userdefine: userTags,
+        });
     }
     catch (err) {
         console.error("Tag fetch error:", err);
