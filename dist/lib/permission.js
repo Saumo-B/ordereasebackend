@@ -7,6 +7,7 @@ exports.PERMISSIONS = {
     MENU_VIEW: "menu:view",
     MENU_UPDATE: "menu:update",
     MENU_DELETE: "menu:delete",
+    TAG_MANAGE: "tag:manage",
     INGREDIENT_VIEW: "ingredient:view",
     INGREDIENT_UPDATE: "ingredient:update",
     INGREDIENT_DELETE: "ingredient:delete",

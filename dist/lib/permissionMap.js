@@ -13,6 +13,12 @@ exports.permissionMap = {
     "PATCH /api/menu/:id": permission_1.PERMISSIONS.MENU_UPDATE,
     "DELETE /api/menu/:id": permission_1.PERMISSIONS.MENU_DELETE,
     // ----------------------
+    // Tags routes
+    // ----------------------
+    "POST /api/tags": permission_1.PERMISSIONS.TAG_MANAGE,
+    "PATCH /api/tags/:id": permission_1.PERMISSIONS.TAG_MANAGE,
+    "DELETE /api/tags/:id": permission_1.PERMISSIONS.TAG_MANAGE,
+    // ----------------------
     // Ingredient routes
     // ----------------------
     "POST /api/ingredients": permission_1.PERMISSIONS.INGRDIENT_CREATE,
