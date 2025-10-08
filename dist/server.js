@@ -27,11 +27,24 @@ const app = (0, express_1.default)();
 app.use((0, helmet_1.default)({
     contentSecurityPolicy: false
 }));
-const unless = (pathPatterns, middleware) => {
+const isPatternRule = (rule) => {
+    return rule.pattern instanceof RegExp;
+};
+const unless = (rules, middleware) => {
     return (req, res, next) => {
-        if (pathPatterns.some(pattern => pattern.test(req.path))) {
-            return next(); // skip auth
+        for (const rule of rules) {
+            // Case 1: plain regex
+            if (rule instanceof RegExp && rule.test(req.path)) {
+                return next();
+            }
+            // Case 2: object with pattern + optional method
+            if (isPatternRule(rule) &&
+                rule.pattern.test(req.path) &&
+                (!rule.method || rule.method.toUpperCase() === req.method.toUpperCase())) {
+                return next();
+            }
         }
+        // Apply middleware normally if no match
         return middleware(req, res, next);
     };
 };
@@ -71,7 +84,7 @@ app.use((req, res, next) => {
 app.use(unless([
     /^\/api\/login/,
     // /^\/api\/register/,
-    // /^\/api\/menu/,
+    { pattern: /^\/api\/menu/, method: "GET" },
     // /^\/api\/kitchen/,
     /^\/api\/myorder/,
     // /^\/api\/orderv2/,
@@ -86,6 +99,7 @@ app.use(unless([
 app.use(unless([
     /^\/api\/login/,
     // /^\/api\/register/,
+    { pattern: /^\/api\/menu/, method: "GET" },
     /^\/api\/docs/,
     /^\/docs-assets/,
     /^\/api\/swagger.json/,

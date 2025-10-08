@@ -29,14 +29,35 @@ app.use(
     contentSecurityPolicy: false
   })
 );
-const unless = (pathPatterns: RegExp[], middleware: any) => {
+type UnlessRule = RegExp | { pattern: RegExp; method?: string };
+
+const isPatternRule = (rule: UnlessRule): rule is { pattern: RegExp; method?: string } => {
+  return (rule as any).pattern instanceof RegExp;
+};
+
+const unless = (rules: UnlessRule[], middleware: any) => {
   return (req: any, res: any, next: any) => {
-    if (pathPatterns.some(pattern => pattern.test(req.path))) {
-      return next(); // skip auth
+    for (const rule of rules) {
+      // Case 1: plain regex
+      if (rule instanceof RegExp && rule.test(req.path)) {
+        return next();
+      }
+
+      // Case 2: object with pattern + optional method
+      if (
+        isPatternRule(rule) &&
+        rule.pattern.test(req.path) &&
+        (!rule.method || rule.method.toUpperCase() === req.method.toUpperCase())
+      ) {
+        return next();
+      }
     }
+
+    // Apply middleware normally if no match
     return middleware(req, res, next);
   };
 };
+
 app.use((req, res, next) => {
   console.log("Request Origin:", req.headers.origin);
   next();
@@ -79,7 +100,7 @@ app.use(
     [
       /^\/api\/login/,
       // /^\/api\/register/,
-      // /^\/api\/menu/,
+      { pattern: /^\/api\/menu/, method: "GET" },
       // /^\/api\/kitchen/,
       /^\/api\/myorder/,
       // /^\/api\/orderv2/,
@@ -101,6 +122,7 @@ app.use(
     [
       /^\/api\/login/,
       // /^\/api\/register/,
+      { pattern: /^\/api\/menu/, method: "GET" },
       /^\/api\/docs/,
       /^\/docs-assets/,
       /^\/api\/swagger.json/,
