@@ -7,6 +7,7 @@ export interface IRecipe {
 export interface IMenuItem extends Document {
   name: string;
   price: number;
+  manualOutOfStock: { type: Boolean, default: false },
   outOfStock: boolean;
   category: String,
   tags: string[];
@@ -18,6 +19,7 @@ export interface IMenuItem extends Document {
 const MenuItemSchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true },
   price: { type: Number, required: true },
+  manualOutOfStock: { type: Boolean, default: false },
   outOfStock: { type: Boolean, default: false },
   category: { type: String },
   description: { type: String },

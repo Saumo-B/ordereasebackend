@@ -121,6 +121,7 @@ app.use(
   unless(
     [
       /^\/api\/login/,
+      /^\/api\/myorder/,
       // /^\/api\/register/,
       { pattern: /^\/api\/menu/, method: "GET" },
       /^\/api\/docs/,

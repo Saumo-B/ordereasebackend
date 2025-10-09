@@ -8,6 +8,7 @@ const mongoose_1 = __importDefault(require("mongoose"));
 const MenuItemSchema = new mongoose_1.default.Schema({
     name: { type: String, required: true, unique: true },
     price: { type: Number, required: true },
+    manualOutOfStock: { type: Boolean, default: false },
     outOfStock: { type: Boolean, default: false },
     category: { type: String },
     description: { type: String },
