@@ -3,24 +3,27 @@ import { Order } from "../models/Order";
 
 const router = Router();
 
-// GET /api/myorders?phone=1234567890   (will auto-convert to +911234567890)
+// GET /api/myorder?phone=1234567890&branch=670e5c3b85a2b456ea94d2c8
 router.get("/", async (req, res, next) => {
   try {
-    let { phone } = req.query;
+    let { phone, branch } = req.query;
 
     if (!phone) {
       return res.status(400).json({ error: "Phone number is required" });
     }
 
-    // Convert to string and normalize
+    // Normalize phone number
     phone = String(phone).trim();
-
-    // // If it doesn't already start with +91, add it
-    // if (!phone.startsWith("+91")) {
+    if (!phone.startsWith("+91")) {
       phone = "+91" + phone;
-    // }
+    }
 
-    const orders = await Order.find({ "customer.phone": phone })
+    // Build filter
+    const filter: any = { "customer.phone": phone };
+    if (branch) filter.branch = branch;
+
+    // Fetch recent orders
+    const orders = await Order.find(filter)
       .sort({ createdAt: -1 })
       .limit(5);
 

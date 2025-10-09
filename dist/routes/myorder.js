@@ -12,20 +12,24 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const Order_1 = require("../models/Order");
 const router = (0, express_1.Router)();
-// GET /api/myorders?phone=1234567890   (will auto-convert to +911234567890)
+// GET /api/myorder?phone=1234567890&branch=670e5c3b85a2b456ea94d2c8
 router.get("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        let { phone } = req.query;
+        let { phone, branch } = req.query;
         if (!phone) {
             return res.status(400).json({ error: "Phone number is required" });
         }
-        // Convert to string and normalize
+        // Normalize phone number
         phone = String(phone).trim();
-        // // If it doesn't already start with +91, add it
-        // if (!phone.startsWith("+91")) {
-        phone = "+91" + phone;
-        // }
-        const orders = yield Order_1.Order.find({ "customer.phone": phone })
+        if (!phone.startsWith("+91")) {
+            phone = "+91" + phone;
+        }
+        // Build filter
+        const filter = { "customer.phone": phone };
+        if (branch)
+            filter.branch = branch;
+        // Fetch recent orders
+        const orders = yield Order_1.Order.find(filter)
             .sort({ createdAt: -1 })
             .limit(5);
         if (!orders.length) {
