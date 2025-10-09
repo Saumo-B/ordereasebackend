@@ -20,10 +20,10 @@ router.get("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
             return res.status(400).json({ error: "Phone number is required" });
         }
         // Normalize phone number
-        phone = String(phone).trim();
-        if (!phone.startsWith("+91")) {
-            phone = "+91" + phone;
-        }
+        // phone = String(phone).trim();
+        // if (!phone.startsWith("+91")) {
+        //   phone = "+91" + phone;
+        // }
         // Build filter
         const filter = { "customer.phone": phone };
         if (branch)

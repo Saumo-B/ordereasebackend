@@ -13,10 +13,10 @@ router.get("/", async (req, res, next) => {
     }
 
     // Normalize phone number
-    phone = String(phone).trim();
-    if (!phone.startsWith("+91")) {
-      phone = "+91" + phone;
-    }
+    // phone = String(phone).trim();
+    // if (!phone.startsWith("+91")) {
+    //   phone = "+91" + phone;
+    // }
 
     // Build filter
     const filter: any = { "customer.phone": phone };
