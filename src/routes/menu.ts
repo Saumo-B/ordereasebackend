@@ -1,30 +1,61 @@
 import { Router } from "express";
 import mongoose from "mongoose";
 import { MenuItem } from "../models/Menu";
+import { Ingredient } from "../models/Ingredients";
 import { autoTagMenuItem } from "../lib/autoTag";
 const router = Router();
 
+
+// Function to check if a menu item or its variant is out of stock
+async function checkAndUpdateOutOfStock(menuItemId: mongoose.Types.ObjectId) {
+  // Find the MenuItem by ID
+  const menuItem = await MenuItem.findById(menuItemId).populate('recipe.ingredient').lean();
+  if (!menuItem) throw new Error("MenuItem not found");
+
+  // Check the stock for the menu item recipe
+  const outOfStock = await Promise.all(menuItem.recipe.map(async (recipe) => {
+    const ingredient = await Ingredient.findById(recipe.ingredient);
+    if (!ingredient) throw new Error("Ingredient not found");
+
+    // Check if stock is enough
+    return ingredient.quantity < recipe.qtyRequired; // return true if out of stock
+  }));
+
+  // If any ingredient is out of stock, set outOfStock to true
+  const isOutOfStock = outOfStock.includes(true);
+
+  // Update the outOfStock field in the menu item
+  await MenuItem.findByIdAndUpdate(menuItemId, {
+    outOfStock: isOutOfStock,
+  });
+}
 /**
  * GET /api/menu
  * Fetch all menu items
  */
 router.get("/", async (req, res, next) => {
   try {
-    const branchId = req.query.branch; 
+    const branchId = req.query.branch;
     if (!branchId) {
       return res.status(400).json({ message: "Branch ID is required" });
     }
+
     const items = await MenuItem.find({ branch: branchId })
       .sort({ createdAt: -1 })
       .select("-recipe -createdAt -updatedAt") // exclude recipe + timestamps
       .lean();
+
+    // Check stock for each item
+    for (const item of items) {
+      const itemId = item._id as mongoose.Types.ObjectId; // Cast _id to ObjectId
+      await checkAndUpdateOutOfStock(itemId); // Pass the correct ObjectId
+    }
 
     res.json(items);
   } catch (e) {
     next(e);
   }
 });
-
 //Get details of single item
 router.get("/:id", async (req, res, next) => {
   try {

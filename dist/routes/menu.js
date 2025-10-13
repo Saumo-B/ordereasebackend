@@ -15,8 +15,32 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const mongoose_1 = __importDefault(require("mongoose"));
 const Menu_1 = require("../models/Menu");
+const Ingredients_1 = require("../models/Ingredients");
 const autoTag_1 = require("../lib/autoTag");
 const router = (0, express_1.Router)();
+// Function to check if a menu item or its variant is out of stock
+function checkAndUpdateOutOfStock(menuItemId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // Find the MenuItem by ID
+        const menuItem = yield Menu_1.MenuItem.findById(menuItemId).populate('recipe.ingredient').lean();
+        if (!menuItem)
+            throw new Error("MenuItem not found");
+        // Check the stock for the menu item recipe
+        const outOfStock = yield Promise.all(menuItem.recipe.map((recipe) => __awaiter(this, void 0, void 0, function* () {
+            const ingredient = yield Ingredients_1.Ingredient.findById(recipe.ingredient);
+            if (!ingredient)
+                throw new Error("Ingredient not found");
+            // Check if stock is enough
+            return ingredient.quantity < recipe.qtyRequired; // return true if out of stock
+        })));
+        // If any ingredient is out of stock, set outOfStock to true
+        const isOutOfStock = outOfStock.includes(true);
+        // Update the outOfStock field in the menu item
+        yield Menu_1.MenuItem.findByIdAndUpdate(menuItemId, {
+            outOfStock: isOutOfStock,
+        });
+    });
+}
 /**
  * GET /api/menu
  * Fetch all menu items
@@ -31,6 +55,11 @@ router.get("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* 
             .sort({ createdAt: -1 })
             .select("-recipe -createdAt -updatedAt") // exclude recipe + timestamps
             .lean();
+        // Check stock for each item
+        for (const item of items) {
+            const itemId = item._id; // Cast _id to ObjectId
+            yield checkAndUpdateOutOfStock(itemId); // Pass the correct ObjectId
+        }
         res.json(items);
     }
     catch (e) {
