@@ -22,7 +22,7 @@ const UserSchema = new Schema<IUser>(
     branch: { type: mongoose.Schema.Types.ObjectId, ref: "Branch", required: true },
     role: {
       type: String,
-      enum: ["owner", "manager", "chef", "waiter"],
+      enum: ["owner", "manager", "chef", "waiter","dev"],
       default: "waiter",
     },
     permissions: {

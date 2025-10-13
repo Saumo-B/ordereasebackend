@@ -74,7 +74,6 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
         const allowedStatuses = ["created", "paid", "done", "failed", "served"];
         if (!allowedStatuses.includes(status))
             return res.status(400).json({ error: "Invalid status" });
-        // populate name like in /today
         const order = yield Order_1.Order.findById(orderId)
             .populate("lineItems.menuItem", "name")
             .session(session);
@@ -90,14 +89,13 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
                 order.status = "done";
             yield order.save({ session });
             yield session.commitTransaction();
-            session.endSession();
         }
         // Case: served
         else if (status === "served") {
             order.served = true;
             order.lineItems.forEach((li) => {
-                if (li.status && li.status.active > 0) {
-                    li.status.served += li.status.active;
+                if (li.status) {
+                    li.status.served += li.status.active || 0;
                     li.status.active = 0;
                 }
             });
@@ -105,14 +103,12 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
                 order.status = "done";
             yield order.save({ session });
             yield session.commitTransaction();
-            session.endSession();
         }
         // Other statuses
         else {
             order.status = status;
             yield order.save({ session });
             yield session.commitTransaction();
-            session.endSession();
         }
         // Transform response
         const transformed = {
@@ -148,9 +144,11 @@ router.patch("/status/:orderId", (req, res, next) => __awaiter(void 0, void 0, v
     }
     catch (err) {
         yield session.abortTransaction();
-        session.endSession();
         console.error("Order status update failed:", err);
         next(err);
+    }
+    finally {
+        session.endSession(); // Ensure session is always ended
     }
 }));
 // 📊 GET /api/kitchen/dashboard-stats (IST-based)

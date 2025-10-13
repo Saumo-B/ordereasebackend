@@ -1,7 +1,7 @@
 import { Router } from "express";
 import "dotenv/config";
 import { deductInventory } from "../lib/inventoryService";
-import { Order,OrderDoc } from "../models/Order";
+import { Order} from "../models/Order";
 import { Ingredient } from "../models/Ingredients"; 
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -9,7 +9,7 @@ import timezone from "dayjs/plugin/timezone";
 
 import { authenticate } from "../middleware/auth";
 
-import mongoose, { Types } from "mongoose";
+import mongoose from "mongoose";
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -72,7 +72,6 @@ router.patch("/status/:orderId", async (req, res, next) => {
     if (!allowedStatuses.includes(status))
       return res.status(400).json({ error: "Invalid status" });
 
-    // populate name like in /today
     const order = await Order.findById(orderId)
       .populate("lineItems.menuItem", "name")
       .session(session);
@@ -91,7 +90,6 @@ router.patch("/status/:orderId", async (req, res, next) => {
 
       await order.save({ session });
       await session.commitTransaction();
-      session.endSession();
     }
 
     // Case: served
@@ -99,8 +97,8 @@ router.patch("/status/:orderId", async (req, res, next) => {
       order.served = true;
 
       order.lineItems.forEach((li: any) => {
-        if (li.status && li.status.active > 0) {
-          li.status.served += li.status.active;
+        if (li.status) {
+          li.status.served += li.status.active || 0;
           li.status.active = 0;
         }
       });
@@ -109,7 +107,6 @@ router.patch("/status/:orderId", async (req, res, next) => {
 
       await order.save({ session });
       await session.commitTransaction();
-      session.endSession();
     }
 
     // Other statuses
@@ -117,7 +114,6 @@ router.patch("/status/:orderId", async (req, res, next) => {
       order.status = status;
       await order.save({ session });
       await session.commitTransaction();
-      session.endSession();
     }
 
     // Transform response
@@ -153,9 +149,10 @@ router.patch("/status/:orderId", async (req, res, next) => {
     return res.json({ message, order: transformed });
   } catch (err) {
     await session.abortTransaction();
-    session.endSession();
     console.error("Order status update failed:", err);
     next(err);
+  } finally {
+    session.endSession();  // Ensure session is always ended
   }
 });
 

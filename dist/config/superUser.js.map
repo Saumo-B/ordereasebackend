@@ -1,0 +1,1 @@
+{"version":3,"file":"superUser.js","sourceRoot":"","sources":["../../src/config/superUser.ts"],"names":[],"mappings":";;;AAAA,kDAAgD;AAEnC,QAAA,UAAU,GAAG;IACxB,GAAG,EAAE,0BAA0B;IAC/B,IAAI,EAAE,OAAO;IACb,KAAK,EAAE,qBAAqB;IAC5B,IAAI,EAAE,KAAK;IACX,MAAM,EAAE,IAAI;IACZ,WAAW,EAAE,MAAM,CAAC,MAAM,CAAC,wBAAW,CAAC;IACvC,OAAO,EAAE,IAAI;CACd,CAAC"}

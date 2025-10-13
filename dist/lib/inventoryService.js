@@ -8,24 +8,38 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.reserveInventory = reserveInventory;
 exports.releaseInventory = releaseInventory;
 exports.deductInventory = deductInventory;
+const mongoose_1 = __importDefault(require("mongoose"));
 const Menu_1 = require("../models/Menu");
+const Ingredients_1 = require("../models/Ingredients");
 // ------------------ RESERVE INVENTORY ------------------
 function reserveInventory(order_1) {
     return __awaiter(this, arguments, void 0, function* (order, session = null) {
         for (const li of order.lineItems) {
             const menuItem = yield Menu_1.MenuItem.findById(li.menuItem)
-                .populate("recipe.ingredient")
+                .populate("recipe.ingredient") // populate recipe with ingredient documents
                 .session(session);
             if (!menuItem)
                 throw new Error(`Menu item not found: ${li.menuItem}`);
             for (const r of menuItem.recipe) {
-                const ingredient = r.ingredient;
+                // Narrowing down the type of ingredient
+                let ingredient = null;
+                if (r.ingredient instanceof mongoose_1.default.Types.ObjectId) {
+                    // The ingredient is just an ObjectId, not populated
+                    ingredient = yield Ingredients_1.Ingredient.findById(r.ingredient).session(session);
+                }
+                else {
+                    // The ingredient is already populated (IngredientDoc)
+                    ingredient = r.ingredient;
+                }
                 if (!ingredient || typeof ingredient.quantity !== "number") {
-                    throw new Error(`Ingredient not populated for menu item ${menuItem.name}`);
+                    throw new Error(`Ingredient not populated or invalid for menu item ${menuItem.name}`);
                 }
                 const status = li.status;
                 const requiredQty = r.qtyRequired * status.active;
@@ -50,11 +64,22 @@ function releaseInventory(items_1) {
             if (!menuItem)
                 throw new Error("Menu item not found");
             for (const r of menuItem.recipe) {
-                const ingredient = r.ingredient;
+                // Narrowing down the type of ingredient
+                let ingredient = null;
+                if (r.ingredient instanceof mongoose_1.default.Types.ObjectId) {
+                    // The ingredient is just an ObjectId, not populated
+                    ingredient = yield Ingredients_1.Ingredient.findById(r.ingredient).session(session);
+                }
+                else {
+                    // The ingredient is already populated (IngredientDoc)
+                    ingredient = r.ingredient;
+                }
                 const qtyToRelease = r.qtyRequired * it.qty;
                 // ✅ Decrement reserved quantity safely
-                ingredient.reservedQuantity = Math.max(0, ingredient.reservedQuantity - qtyToRelease);
-                yield ingredient.save({ session });
+                if (ingredient) {
+                    ingredient.reservedQuantity = Math.max(0, ingredient.reservedQuantity - qtyToRelease);
+                    yield ingredient.save({ session });
+                }
             }
         }
     });
@@ -69,7 +94,16 @@ function deductInventory(order_1) {
             if (!menuItem)
                 throw new Error(`Menu item not found: ${li.menuItem}`);
             for (const r of menuItem.recipe) {
-                const ingredient = r.ingredient;
+                // Narrowing down the type of ingredient
+                let ingredient = null;
+                if (r.ingredient instanceof mongoose_1.default.Types.ObjectId) {
+                    // The ingredient is just an ObjectId, not populated
+                    ingredient = yield Ingredients_1.Ingredient.findById(r.ingredient).session(session);
+                }
+                else {
+                    // The ingredient is already populated (IngredientDoc)
+                    ingredient = r.ingredient;
+                }
                 if (!ingredient)
                     throw new Error(`Ingredient not populated for menu item ${menuItem.name}`);
                 const status = li.status;

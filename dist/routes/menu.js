@@ -102,16 +102,34 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
             // Auto-tagging
             item.tags = [
                 ...(item.tags || []),
-                ...(0, autoTag_1.autoTagMenuItem)(item.name, item.description)
+                ...(0, autoTag_1.autoTagMenuItem)(item.name, item.description),
             ];
-            item.tags = [...new Set(item.tags)]; // remove duplicates
-            // Validate ingredient IDs if recipe provided
+            item.tags = [...new Set(item.tags)]; // Remove duplicates
+            // Validate ingredient IDs if recipe provided for the base item
             if (Array.isArray(item.recipe)) {
                 for (const r of item.recipe) {
                     if (!mongoose_1.default.Types.ObjectId.isValid(r.ingredient)) {
                         return res
                             .status(400)
-                            .json({ error: `Invalid ingredient ID: ${r.ingredient}` });
+                            .json({ error: `Invalid ingredient ID in recipe: ${r.ingredient}` });
+                    }
+                }
+            }
+            // Validate variants if they exist
+            if (Array.isArray(item.variants) && item.variants.length > 0) {
+                for (const variant of item.variants) {
+                    if (!variant.variantName || !variant.price) {
+                        return res.status(400).json({ error: "Each variant must have variantName and price" });
+                    }
+                    // Validate variant recipe if provided
+                    if (Array.isArray(variant.recipe)) {
+                        for (const r of variant.recipe) {
+                            if (!mongoose_1.default.Types.ObjectId.isValid(r.ingredient)) {
+                                return res
+                                    .status(400)
+                                    .json({ error: `Invalid ingredient ID in variant recipe: ${r.ingredient}` });
+                            }
+                        }
                     }
                 }
             }
@@ -148,16 +166,66 @@ router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function*
 router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
+        // Validate MongoDB ObjectId
         if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ error: "Invalid MongoDB ObjectId" });
         }
-        const item = yield Menu_1.MenuItem.findByIdAndUpdate(id, req.body, { new: true });
+        const { menuItem } = req.body; // Assuming the patch data is inside "menuItem"
+        // If variants are provided, validate them
+        if (menuItem && Array.isArray(menuItem.variants)) {
+            for (const variant of menuItem.variants) {
+                if (!variant.variantName || !variant.price) {
+                    return res.status(400).json({ error: "Each variant must have variantName and price" });
+                }
+                // Validate variant recipe if provided
+                if (Array.isArray(variant.recipe)) {
+                    for (const r of variant.recipe) {
+                        if (!mongoose_1.default.Types.ObjectId.isValid(r.ingredient)) {
+                            return res.status(400).json({ error: `Invalid ingredient ID in variant recipe: ${r.ingredient}` });
+                        }
+                    }
+                }
+            }
+        }
+        // If the base item's recipe is provided in the update, validate it
+        if (menuItem && Array.isArray(menuItem.recipe)) {
+            for (const r of menuItem.recipe) {
+                if (!mongoose_1.default.Types.ObjectId.isValid(r.ingredient)) {
+                    return res.status(400).json({ error: `Invalid ingredient ID in recipe: ${r.ingredient}` });
+                }
+            }
+        }
+        // Auto-tagging for name and description (optional)
+        if (menuItem && menuItem.name && menuItem.description) {
+            menuItem.tags = [
+                ...(menuItem.tags || []),
+                ...(0, autoTag_1.autoTagMenuItem)(menuItem.name, menuItem.description),
+            ];
+            menuItem.tags = [...new Set(menuItem.tags)]; // Remove duplicates
+        }
+        // Update the menu item in the database
+        const item = yield Menu_1.MenuItem.findByIdAndUpdate(id, menuItem, { new: true });
         if (!item)
             return res.status(404).json({ error: "Menu item not found" });
         res.json({ message: "Menu item updated", item });
     }
     catch (e) {
-        next(e);
+        console.error("Error updating MenuItem:", e);
+        // Handle Mongoose ValidationError
+        if (e instanceof mongoose_1.default.Error.ValidationError) {
+            return res.status(400).json({ error: e.message });
+        }
+        // Handle Mongoose CastError (with 'path' property)
+        if (e instanceof mongoose_1.default.Error.CastError) {
+            // Access 'path' property for CastError
+            return res.status(400).json({ error: `Invalid value for field: ${e.path}` });
+        }
+        // Handle any other generic errors
+        if (e instanceof Error) {
+            return res.status(500).json({ error: e.message });
+        }
+        // If the error doesn't match any known type, return a generic internal server error
+        return res.status(500).json({ error: "Unknown error occurred" });
     }
 }));
 /************************

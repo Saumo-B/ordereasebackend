@@ -11,10 +11,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const Branch_1 = require("../models/Branch");
-const auth_1 = require("../middleware/auth");
 const router = (0, express_1.Router)();
 // ✅ Create Branch
-router.post("/", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+router.post("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const branch = new Branch_1.Branch(req.body);
         yield branch.save();
@@ -25,7 +24,7 @@ router.post("/", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void
     }
 }));
 // ✅ Get All Branches
-router.get("/", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+router.get("/", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const branches = yield Branch_1.Branch.find().lean();
         res.json(branches);
@@ -35,7 +34,7 @@ router.get("/", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void 
     }
 }));
 // ✅ Get Single Branch
-router.get("/:id", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+router.get("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const branch = yield Branch_1.Branch.findById(req.params.id).lean();
         if (!branch)
@@ -47,7 +46,7 @@ router.get("/:id", auth_1.authenticate, (req, res, next) => __awaiter(void 0, vo
     }
 }));
 // ✅ Update Branch
-router.put("/:id", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+router.put("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const branch = yield Branch_1.Branch.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
         if (!branch)
@@ -59,7 +58,7 @@ router.put("/:id", auth_1.authenticate, (req, res, next) => __awaiter(void 0, vo
     }
 }));
 // ✅ Delete Branch
-router.delete("/:id", auth_1.authenticate, (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
+router.delete("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const branch = yield Branch_1.Branch.findByIdAndDelete(req.params.id);
         if (!branch)

@@ -28,6 +28,7 @@
 /.vercel
 fix_db.js
 add_db.js
+createsuperuser.js
 
 # debug
 npm-debug.log*
