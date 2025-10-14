@@ -199,7 +199,7 @@ router.patch("/:id", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         if (!mongoose_1.default.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ error: "Invalid MongoDB ObjectId" });
         }
-        const { menuItem } = req.body; // Assuming the patch data is inside "menuItem"
+        const menuItem = req.body; // Assuming the patch data is inside "menuItem"
         // If variants are provided, validate them
         if (menuItem && Array.isArray(menuItem.variants)) {
             for (const variant of menuItem.variants) {
