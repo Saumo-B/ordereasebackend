@@ -70,8 +70,10 @@ router.get("/today", (req, res, next) => __awaiter(void 0, void 0, void 0, funct
         const endOfDay = (0, dayjs_1.default)().tz(TZ).endOf("day").toDate();
         const orders = yield Order_1.Order.find({
             branch: branchId,
-            createdAt: { $gte: startOfDay, $lte: endOfDay },
-            status: { $ne: "done" }, // 👈 This line filters out completed orders
+            $or: [
+                { createdAt: { $gte: startOfDay, $lte: endOfDay } }, // Today’s orders
+                { createdAt: { $lt: startOfDay }, status: { $ne: "done" } } // Older but still active
+            ],
         })
             .sort({ createdAt: -1 })
             .populate("lineItems.menuItem", "name")

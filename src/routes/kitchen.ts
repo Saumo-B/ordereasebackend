@@ -68,8 +68,10 @@ router.get("/today", async (req, res, next) => {
 
     const orders = await Order.find({
       branch: branchId,
-      createdAt: { $gte: startOfDay, $lte: endOfDay },
-      status: { $ne: "done" }, // 👈 This line filters out completed orders
+      $or: [
+        { createdAt: { $gte: startOfDay, $lte: endOfDay } },      // Today’s orders
+        { createdAt: { $lt: startOfDay }, status: { $ne: "done" } } // Older but still active
+      ],
     })
       .sort({ createdAt: -1 })
       .populate("lineItems.menuItem", "name")
@@ -462,6 +464,5 @@ router.get("/sales-report", async (req, res, next) => {
     next(err);
   }
 });
-
 
 export default router;
