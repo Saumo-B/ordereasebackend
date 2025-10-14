@@ -7,8 +7,6 @@ import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import timezone from "dayjs/plugin/timezone";
 
-import { authenticate } from "../middleware/auth";
-
 import mongoose from "mongoose";
 
 dayjs.extend(utc);
@@ -18,9 +16,48 @@ const router = Router();
 const TZ = "Asia/Kolkata"; // Force IST
 
 // Get all orders for today (IST)
-router.get("/today", authenticate , async (req, res, next) => {
+// router.get("/today" , async (req, res, next) => {
+//   try {
+//     const branchId = req.query.branch; // 👈 Branch ID passed in query
+
+//     if (!branchId) {
+//       return res.status(400).json({ message: "Branch ID is required" });
+//     }
+
+//     const startOfDay = dayjs().tz(TZ).startOf("day").toDate();
+//     const endOfDay = dayjs().tz(TZ).endOf("day").toDate();
+
+//     const orders = await Order.find({
+//       branch: branchId, // 👈 filter by branch
+//       createdAt: { $gte: startOfDay, $lte: endOfDay },
+//     })
+//       .sort({ createdAt: -1 })
+//       .populate("lineItems.menuItem", "name") // only fetch menuItem name
+//       .lean();
+
+//     // 🔹 Transform: flatten menuItem into name
+//     const transformed = orders.map(order => ({
+//       ...order,
+//       lineItems: order.lineItems.map((li: any) => ({
+//         active: li.status?.active || 0,
+//         price: li.price,
+//         served: li.status?.served || 0,
+//         name: li.menuItem?.name || "Unknown",
+//       })),
+//     }));
+
+//     return res.json({
+//       count: transformed.length,
+//       orders: transformed,
+//     });
+//   } catch (e) {
+//     console.error("Fetch today's orders error:", e);
+//     next(e);
+//   }
+// });
+router.get("/today", async (req, res, next) => {
   try {
-    const branchId = req.query.branch; // 👈 Branch ID passed in query
+    const branchId = req.query.branch;
 
     if (!branchId) {
       return res.status(400).json({ message: "Branch ID is required" });
@@ -30,14 +67,14 @@ router.get("/today", authenticate , async (req, res, next) => {
     const endOfDay = dayjs().tz(TZ).endOf("day").toDate();
 
     const orders = await Order.find({
-      branch: branchId, // 👈 filter by branch
+      branch: branchId,
       createdAt: { $gte: startOfDay, $lte: endOfDay },
+      status: { $ne: "done" }, // 👈 This line filters out completed orders
     })
       .sort({ createdAt: -1 })
-      .populate("lineItems.menuItem", "name") // only fetch menuItem name
+      .populate("lineItems.menuItem", "name")
       .lean();
 
-    // 🔹 Transform: flatten menuItem into name
     const transformed = orders.map(order => ({
       ...order,
       lineItems: order.lineItems.map((li: any) => ({
@@ -57,6 +94,7 @@ router.get("/today", authenticate , async (req, res, next) => {
     next(e);
   }
 });
+
 
 // PATCH /api/kitchen/status/:orderId
 router.patch("/status/:orderId", async (req, res, next) => {
@@ -157,7 +195,7 @@ router.patch("/status/:orderId", async (req, res, next) => {
 });
 
 // 📊 GET /api/kitchen/dashboard-stats (IST-based)
-router.get("/dashboard-stats", authenticate, async (req, res, next) => {
+router.get("/dashboard-stats", async (req, res, next) => {
   try {
     const branchId = req.query.branch as string;
     if (!branchId) {
@@ -274,7 +312,7 @@ router.get("/dashboard-stats", authenticate, async (req, res, next) => {
   }
 });
 
-router.get("/sales-report", authenticate, async (req, res, next) => {
+router.get("/sales-report", async (req, res, next) => {
   try {
     const { startDate, endDate, branchId } = req.query as { startDate?: string; endDate?: string; branchId?: string };
 
