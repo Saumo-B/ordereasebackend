@@ -149,7 +149,16 @@ export async function deductInventory(
   order: OrderDoc,
   session: mongoose.ClientSession | null = null
 ) {
-  // Loop through each line item in the order
+  // Step 1: Release reserved quantities
+  const itemsToRelease = order.lineItems.map(li => ({
+    menuItem: li.menuItem,
+    qty: (li.status as { active: number; served: number }).active +
+         (li.status as { active: number; served: number }).served
+  }));
+
+  await releaseInventory(itemsToRelease, session);
+
+  // Step 2: Deduct from actual inventory
   for (const li of order.lineItems) {
     const menuItem = await MenuItem.findById(li.menuItem)
       .populate("recipe.ingredient")
@@ -157,43 +166,29 @@ export async function deductInventory(
 
     if (!menuItem) throw new Error(`Menu item not found: ${li.menuItem}`);
 
-    // Loop through each ingredient in the recipe of the menu item
     for (const r of menuItem.recipe) {
       let ingredient: IngredientDoc | null = null;
+
       if (r.ingredient instanceof mongoose.Types.ObjectId) {
-        // If the ingredient is just an ObjectId, not populated
         ingredient = await Ingredient.findById(r.ingredient).session(session);
       } else {
-        // If the ingredient is already populated (IngredientDoc)
         ingredient = r.ingredient as IngredientDoc;
       }
 
-      if (!ingredient) throw new Error(`Ingredient not populated for menu item ${menuItem.name}`);
+      if (!ingredient) throw new Error(`Ingredient not found for ${menuItem.name}`);
 
-      // Calculate the total quantity to deduct from stock based on active and served
       const status = li.status as { active: number; served: number };
-      
-      // Deduct from active items if they are still active (before being served)
-      const qtyToDeductActive = r.qtyRequired * status.active;  
-      
-      // Deduct from served items, which have already been consumed
-      const qtyToDeductServed = r.qtyRequired * status.served;  
+      const qtyToDeduct = r.qtyRequired * (status.active + status.served);
 
-      // Total quantity to deduct from inventory
-      const totalQtyToDeduct = qtyToDeductActive + qtyToDeductServed;
-
-      if (ingredient.quantity - totalQtyToDeduct < 0) {
+      if (ingredient.quantity < qtyToDeduct) {
         throw new Error(
-          `Not enough ${ingredient.name}. Available: ${ingredient.quantity}, Required: ${totalQtyToDeduct}`
+          `Not enough ${ingredient.name}. Available: ${ingredient.quantity}, Required: ${qtyToDeduct}`
         );
       }
 
-      // Deduct the stock
-      ingredient.quantity -= totalQtyToDeduct;
-      ingredient.reservedQuantity -= totalQtyToDeduct;
-
-      // Save the updated ingredient with the session
+      ingredient.quantity -= qtyToDeduct;
       await ingredient.save({ session });
     }
   }
 }
+
